@@ -1,0 +1,21 @@
+Simulation complete. Metrics: {
+  "playerCount": 64,
+  "teamCount": 32,
+  "courtCount": 6,
+  "divisions": 2,
+  "create-tournament": 5095,
+  "tournamentId": "cmh25lnzp01b6tfj0hw9u49c1",
+  "import-men-s-doubles-int": 1622,
+  "matches-created-men-s-doubles-int": 15,
+  "advancements-created-men-s-doubles-int": 14,
+  "score-men-s-doubles-int": 1143,
+  "matches-scored-men-s-doubles-int": 15,
+  "import-mixed-doubles-adv": 306,
+  "matches-created-mixed-doubles-adv": 24,
+  "advancements-created-mixed-doubles-adv": 0,
+  "score-mixed-doubles-adv": 1591,
+  "matches-scored-mixed-doubles-adv": 24,
+  "totalDuration": 15344,
+  "matchesScored": 39,
+  "timestamp": "2025-10-22T15:34:21.021Z"
+}

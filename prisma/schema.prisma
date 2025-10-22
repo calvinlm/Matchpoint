@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AgeGroup {
+  JUNIOR
+  A18
+  A35
+  A50
+}
+
+enum Level {
+  NOV   // Novice
+  INT   // Intermediate
+  ADV   // Advanced
+  OPN   // Open
+}
+
+
+enum BracketType {
+  SINGLE_ELIMINATION
+  DOUBLE_ELIMINATION
+  ROUND_ROBIN
+}
+
+enum AdvancementPlacement {
+  WINNER
+  LOSER
+}
+
+model Tournament {
+  id                String      @id @default(cuid())
+  slug              String      @unique
+  name              String
+  plannedCourtCount Int?
+  startDate         DateTime?
+  endDate           DateTime?
+  location          String?
+  divisions         Division[]
+  courts            Court[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model Division {
+  id           String        @id @default(cuid())
+  name         String
+  level        Level
+  ageGroup     AgeGroup
+  format       String
+  tournamentId String
+  tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  brackets     Bracket[]
+  registrations Registration[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([tournamentId])
+}
+
+model Bracket {
+  id         String       @id @default(cuid())
+  divisionId String
+  division   Division     @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  type       BracketType
+  config     Json
+  locked     Boolean      @default(false)
+  matches    Match[]
+  standings  Standing[]
+  seedings   BracketSeeding[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([divisionId])
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  bracketId String
+  bracket   Bracket  @relation(fields: [bracketId], references: [id], onDelete: Cascade)
+  team1Id   String?
+  team1     Team?    @relation("Match_team1", fields: [team1Id], references: [id])
+  team2Id   String?
+  team2     Team?    @relation("Match_team2", fields: [team2Id], references: [id])
+  winnerId  String?
+  winner    Team?    @relation("Match_winner", fields: [winnerId], references: [id])
+  courtId   String?
+  court     Court?   @relation(fields: [courtId], references: [id])
+  score     Json?
+  startTime DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  advancementsFrom MatchAdvancement[] @relation("AdvancementFromMatch")
+  advancementsTo   MatchAdvancement[] @relation("AdvancementToMatch")
+
+  @@index([bracketId])
+  @@index([courtId])
+}
+
+model Standing {
+  id            String   @id @default(cuid())
+  bracketId     String
+  bracket       Bracket  @relation(fields: [bracketId], references: [id], onDelete: Cascade)
+  teamId        String
+  team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  wins          Int      @default(0)
+  losses        Int      @default(0)
+  pointsFor     Int      @default(0)
+  pointsAgainst Int      @default(0)
+  quotient      Decimal  @default(0) @db.Decimal(10, 4)
+  rank          Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([bracketId, teamId])
+}
+
+model Registration {
+  id           String     @id @default(cuid())
+  divisionId   String
+  division     Division   @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  teamId       String
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  entryCode    String
+  seedNote     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([divisionId, entryCode])
+  @@unique([divisionId, teamId])
+}
+
+model Team {
+  id              String        @id @default(cuid())
+  name            String
+  registrations   Registration[]
+  players         TeamPlayer[]
+  matchesAsTeam1  Match[]       @relation("Match_team1")
+  matchesAsTeam2  Match[]       @relation("Match_team2")
+  matchesWon      Match[]       @relation("Match_winner")
+  standings       Standing[]
+  bracketSeeding  BracketSeeding[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model TeamPlayer {
+  teamId    String
+  playerId  String
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, playerId])
+}
+
+model Player {
+  id          String       @id @default(cuid())
+  firstName   String
+  lastName    String
+  gender      String?
+  dateOfBirth DateTime?
+  teams       TeamPlayer[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([lastName])
+  @@index([dateOfBirth])
+}
+
+model Court {
+  id           String      @id @default(cuid())
+  tournamentId String
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  label        String
+  active       Boolean     @default(true)
+  matches      Match[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([tournamentId, label])
+}
+
+model BracketSeeding {
+  bracketId String
+  teamId    String
+  seed      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bracket   Bracket @relation(fields: [bracketId], references: [id], onDelete: Cascade)
+  team      Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([bracketId, teamId])
+  @@index([teamId])
+  @@unique([bracketId, seed])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actor        String?
+  action       String
+  resourceType String
+  resourceId   String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+}
+
+model MatchAdvancement {
+  id          String                @id @default(cuid())
+  fromMatchId String
+  toMatchId   String
+  placement   AdvancementPlacement
+  slot        Int
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  fromMatch   Match                 @relation("AdvancementFromMatch", fields: [fromMatchId], references: [id], onDelete: Cascade)
+  toMatch     Match                 @relation("AdvancementToMatch", fields: [toMatchId], references: [id], onDelete: Cascade)
+
+  @@unique([fromMatchId, placement])
+  @@unique([toMatchId, placement, slot])
+  @@index([toMatchId])
+}
