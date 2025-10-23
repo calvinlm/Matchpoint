@@ -1,12 +1,14 @@
 import React from "react";
 import PublicTournamentLayout from "./components/PublicTournamentLayout";
 
-export default function PublicLayout({
+export default async function PublicLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  return <PublicTournamentLayout slug={params.slug}>{children}</PublicTournamentLayout>;
+  const { slug } = await params;
+  
+  return <PublicTournamentLayout slug={slug}>{children}</PublicTournamentLayout>;
 }
