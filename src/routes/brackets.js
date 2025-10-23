@@ -70,20 +70,23 @@ router.post(
         return res.status(error.status).json({ error: error.message });
       }
 
+      // Count how many brackets already exist in this division to determine the next group label
+      const existingBracketCount = await prisma.bracket.count({
+        where: { divisionId: division.id },
+      });
+
       const bracket = await prisma.bracket.create({
         data: {
           type,
-          name: `Group ${String.fromCharCode(64 + bracketCount + 1)}`, // A, B, C, etc.
+          name: `Group ${String.fromCharCode(64 + existingBracketCount + 1)}`, // A, B, C, etc.
           divisionId: division.id,
           config: sanitizedConfig,
           locked: Boolean(locked),
         },
       });
 
-      // Count how many brackets exist in this division
-      const bracketCount = await prisma.bracket.count({
-        where: { divisionId: division.id },
-      });
+      // Count how many brackets exist in this division including the newly created one
+      const bracketCount = existingBracketCount + 1;
 
       // If there are 2 or more brackets, auto-generate a "Finals" bracket
       if (bracketCount >= 2) {
