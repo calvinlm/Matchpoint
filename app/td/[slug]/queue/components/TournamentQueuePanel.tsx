@@ -22,9 +22,10 @@ function formatTeam(team: MatchSummary["team1"]) {
   if (!team) {
     return "TBD";
   }
+  
+  const base = team.entryCode ? `${team.entryCode} · ${team.name}` : team.name;
 
   if (!team.players || team.players.length === 0) {
-    const base = team.entryCode ? `${team.entryCode} · ${team.name}` : team.name;
     return base;
   }
 
