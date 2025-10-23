@@ -3,6 +3,7 @@ const prisma = require('../lib/prisma');
 const requireAuth = require('../middleware/requireAuth');
 const { recordAuditLog } = require('../services/audit');
 const { parseConsolidatedCsv } = require('../import/csvImporter');
+const { buildTournamentExportCsv } = require('../import/csvExporter');
 const { assignEntryCodes, parseExistingSequence } = require('../import/entryCode');
 const { getTournamentQueue } = require('../services/scheduling');
 
@@ -1380,6 +1381,83 @@ router.get('/:slug/matches/:matchId', requireAuth, async (req, res) => {
 function divisionCompositeKey(division) {
   return `${division.name}|${division.level}|${division.ageGroup}|${division.format}`;
 }
+
+router.get('/:slug/export', requireAuth, async (req, res) => {
+  const slug = req.params.slug?.trim();
+
+  if (!slug) {
+    return res.status(400).json({ error: 'slug is required' });
+  }
+
+  try {
+    const tournament = await prisma.tournament.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        divisions: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            name: true,
+            level: true,
+            ageGroup: true,
+            format: true,
+            registrations: {
+              orderBy: { createdAt: 'asc' },
+              select: {
+                seedNote: true,
+                team: {
+                  select: {
+                    name: true,
+                    players: {
+                      orderBy: { createdAt: 'asc' },
+                      select: {
+                        player: {
+                          select: {
+                            firstName: true,
+                            lastName: true,
+                            dateOfBirth: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!tournament) {
+      return res.status(404).json({ error: `Tournament with slug "${slug}" not found` });
+    }
+
+    const { csv, rowCount } = buildTournamentExportCsv(tournament.divisions ?? []);
+
+    const sanitizedSlug = slug.replace(/[^a-z0-9_-]+/gi, '-');
+    const filename = `${sanitizedSlug || 'tournament'}-registrations.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    await recordAuditLog({
+      actor: req.user?.email ?? 'unknown',
+      action: 'TOURNAMENT_EXPORT',
+      resourceType: 'Tournament',
+      resourceId: tournament.id,
+      metadata: {
+        rowCount,
+      },
+    });
+
+    return res.status(200).send(csv);
+  } catch (error) {
+    console.error('Failed to export tournament data', error);
+    return res.status(500).json({ error: 'Failed to export CSV' });
+  }
+});
 
 router.post('/:slug/import', requireAuth, async (req, res) => {
   const slug = req.params.slug?.trim();

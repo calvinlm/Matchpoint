@@ -224,6 +224,10 @@ export function deleteTournament(slug: string, token?: string) {
   return apiClient.delete<void>(`${baseUrl}/tournaments/${slug}`, token);
 }
 
+export function exportTournamentCsv(slug: string, token?: string) {
+  return apiClient.get<string>(`${baseUrl}/tournaments/${slug}/export`, token);
+}
+
 export function getTournamentSummary(slug: string, token?: string) {
   return apiClient
     .get<unknown>(`${baseUrl}/tournaments/${slug}/summary`, token)
