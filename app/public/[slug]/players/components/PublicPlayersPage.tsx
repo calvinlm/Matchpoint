@@ -132,7 +132,7 @@ export default function PublicPlayersPage({ slug }: Props) {
     );
   }
 
-  const filteredTeams = data.teams.filter(filterTeam);
+  const filteredTeams = data?.teams?.filter(filterTeam) ?? [];
 
   return (
     <main

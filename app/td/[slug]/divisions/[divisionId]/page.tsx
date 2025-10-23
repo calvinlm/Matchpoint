@@ -7,6 +7,8 @@ type PageProps = {
   };
 };
 
-export default function Page({ params }: PageProps) {
-  return <DivisionWorkspace slug={params.slug} divisionId={params.divisionId} />;
+export default async function Page({ params }: PageProps) {
+  const { slug } = await params;
+  const { divisionId } = await params;
+  return <DivisionWorkspace slug={slug} divisionId={divisionId} />;
 }

@@ -6,6 +6,7 @@ type PageProps = {
   };
 };
 
-export default function Page({ params }: PageProps) {
-  return <TournamentOverviewPage slug={params.slug} />;
+export default async function Page({ params }: PageProps) {
+  const { slug } = params;
+  return <TournamentOverviewPage slug={slug} />;
 }
