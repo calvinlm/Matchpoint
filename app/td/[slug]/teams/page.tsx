@@ -3,6 +3,7 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -356,8 +357,20 @@ function TeamCard({ slug, team }: { slug: string; team: Team }) {
   );
 }
 
-export default function TeamsPage({ params }: { params: { slug: string } }) {
-  const { slug } = params;
+export default function TeamsPage() {
+  // ✅ read the dynamic route param from the client-side hook
+  const { slug } = useParams<{ slug: string }>();
+
+  // (optional safety) if slug is ever undefined momentarily
+  if (!slug) {
+    return (
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-40 w-full" />
+      </main>
+    );
+  }
+
   const teamsQuery = useTournamentTeams(slug);
 
   return (

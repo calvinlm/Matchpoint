@@ -23,8 +23,8 @@ function formatTeam(team: MatchSummary["team1"]) {
     return "TBD";
   }
 
-  const base = team.entryCode ? `${team.entryCode} · ${team.name}` : team.name;
   if (!team.players || team.players.length === 0) {
+    const base = team.entryCode ? `${team.entryCode} · ${team.name}` : team.name;
     return base;
   }
 
@@ -174,159 +174,190 @@ function BracketQueueCard({
         )}
       </CardContent>
     </Card>
+
   );
 }
 
 export function TournamentQueuePanel({ slug, token }: Props) {
-  const { data, isLoading, isError, error, refetch, isFetching } = useTournamentQueue(slug, token);
+  // Always call hooks at the top
+  const { data, isLoading, isError, error, refetch, isFetching } =
+    useTournamentQueue(slug, token);
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-40 w-full" />
-      </div>
-    );
-  }
+  // Guard inside, not around, hooks
+  const queues = data?.queues ?? [];
+  const globalQueue = data?.globalQueue ?? [];
+  const updatedAt = data?.updatedAt ?? Date.now();
+  const tournamentName = data?.tournamentName ?? "Live Queue";
 
-  if (isError) {
-    return (
-      <Alert variant="destructive">
-        <AlertTitle>Unable to load queue</AlertTitle>
-        <AlertDescription>
-          {error instanceof Error ? error.message : "Unknown error"}
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  const divisionGroups = React.useMemo(() => {
+    const order: Array<{ divisionId: string; divisionName: string }> = [];
+    const buckets = new Map<string, Array<TournamentQueue["queues"][number]>>();
 
-  if (!data) {
-    return <p className="text-sm text-muted-foreground">No queue data available for this tournament.</p>;
-  }
+    queues.forEach((entry) => {
+      if (!buckets.has(entry.divisionId)) {
+        buckets.set(entry.divisionId, []);
+        order.push({ divisionId: entry.divisionId, divisionName: entry.divisionName });
+      }
+      buckets.get(entry.divisionId)!.push(entry);
+    });
 
-  const { globalQueue, queues, updatedAt, tournamentName } = data;
+    return order.map(({ divisionId, divisionName }) => {
+      const items = buckets.get(divisionId) ?? [];
+      const queuedMatches = items.reduce((count, bracket) => count + bracket.queue.length, 0);
+      return { divisionId, divisionName, items, queuedMatches };
+    });
+  }, [queues]);
 
   const totalQueued = globalQueue.length;
   const totalBrackets = queues.length;
   const pausedQueues = queues.filter((entry) => entry.queuePaused).length;
-
-  const divisionGroups = React.useMemo(
-    () => {
-      const order: Array<{ divisionId: string; divisionName: string }> = [];
-      const buckets = new Map<string, Array<TournamentQueue["queues"][number]>>();
-
-      queues.forEach((entry) => {
-        if (!buckets.has(entry.divisionId)) {
-          buckets.set(entry.divisionId, []);
-          order.push({ divisionId: entry.divisionId, divisionName: entry.divisionName });
-        }
-        buckets.get(entry.divisionId)!.push(entry);
-      });
-
-      return order.map(({ divisionId, divisionName }) => {
-        const items = buckets.get(divisionId) ?? [];
-        const queuedMatches = items.reduce((count, bracket) => count + bracket.queue.length, 0);
-        return { divisionId, divisionName, items, queuedMatches };
-      });
-    },
-    [queues],
-  );
   const nextMatch = globalQueue[0];
 
+  // Single return — branch in JSX only
   return (
     <section className="space-y-10">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {tournamentName ?? "Live Queue"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Tournament slug: {slug}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Updated {new Date(updatedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-          </p>
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
         </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/td/${slug}`}>Overview</Link>
-          </Button>
-          <Button onClick={() => refetch()} disabled={isFetching}>
-            {isFetching ? "Refreshing…" : "Refresh now"}
-          </Button>
-        </div>
-      </header>
+      ) : isError ? (
+        <Alert variant="destructive">
+          <AlertTitle>Unable to load queue</AlertTitle>
+          <AlertDescription>
+            {error instanceof Error ? error.message : "Unknown error"}
+          </AlertDescription>
+        </Alert>
+      ) : !data ? (
+        <p className="text-sm text-muted-foreground">
+          No queue data available for this tournament.
+        </p>
+      ) : (
+        <>
+          <header className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {tournamentName}
+              </h1>
+              <p className="text-sm text-muted-foreground">Tournament slug: {slug}</p>
+              <p className="text-xs text-muted-foreground">
+                Updated{" "}
+                {new Date(updatedAt).toLocaleTimeString(undefined, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/td/${slug}`}>Overview</Link>
+              </Button>
+              <Button onClick={() => refetch()} disabled={isFetching}>
+                {isFetching ? "Refreshing…" : "Refresh now"}
+              </Button>
+            </div>
+          </header>
 
-      <section className="grid gap-3 sm:grid-cols-3">
-        <Card>
-          <CardContent className="space-y-1 p-4">
-            <p className="text-xs font-medium uppercase text-muted-foreground">Queued Matches</p>
-            <p className="text-3xl font-semibold text-foreground">{totalQueued}</p>
-            <p className="text-xs text-muted-foreground">
-              Across {totalBrackets} bracket{totalBrackets === 1 ? "" : "s"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="space-y-1 p-4">
-            <p className="text-xs font-medium uppercase text-muted-foreground">Paused Queues</p>
-            <p className="text-3xl font-semibold text-foreground">{pausedQueues}</p>
-            <p className="text-xs text-muted-foreground">
-              {pausedQueues === 0 ? "All queues active" : "Resume paused queues as ready"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="space-y-2 p-4">
-            <p className="text-xs font-medium uppercase text-muted-foreground">Next up</p>
-            {nextMatch ? (
-              <>
-                <p className="text-sm font-semibold text-foreground">
-                  {formatTeam(nextMatch.team1)} vs {formatTeam(nextMatch.team2)}
+          <section className="grid gap-3 sm:grid-cols-3">
+            <Card>
+              <CardContent className="space-y-1 p-4">
+                <p className="text-xs font-medium uppercase text-muted-foreground">
+                  Queued Matches
+                </p>
+                <p className="text-3xl font-semibold text-foreground">
+                  {totalQueued}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Priority {nextMatch.priority ?? 0} • {nextMatch.bracketType?.replace(/_/g, " ")}
+                  Across {totalBrackets} bracket{totalBrackets === 1 ? "" : "s"}
                 </p>
-              </>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="space-y-1 p-4">
+                <p className="text-xs font-medium uppercase text-muted-foreground">
+                  Paused Queues
+                </p>
+                <p className="text-3xl font-semibold text-foreground">
+                  {pausedQueues}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {pausedQueues === 0
+                    ? "All queues active"
+                    : "Resume paused queues as ready"}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                <p className="text-xs font-medium uppercase text-muted-foreground">
+                  Next up
+                </p>
+                {nextMatch ? (
+                  <>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatTeam(nextMatch.team1)} vs {formatTeam(nextMatch.team2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Priority {nextMatch.priority ?? 0} •{" "}
+                      {nextMatch.bracketType?.replace(/_/g, " ")}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Queue is clear — waiting for new matches.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Global queue</h2>
+              <Badge variant="outline">{totalQueued} waiting</Badge>
+            </div>
+            <QueueTable queue={globalQueue} />
+          </section>
+
+          <section className="space-y-5">
+            <h2 className="text-lg font-semibold">Queues by division</h2>
+            {divisionGroups.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No brackets configured yet.
+              </p>
             ) : (
-              <p className="text-sm text-muted-foreground">Queue is clear — waiting for new matches.</p>
+              divisionGroups.map((group) => (
+                <section
+                  key={group.divisionId}
+                  id={`division-${group.divisionId}`}
+                  className="space-y-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-base font-semibold text-foreground">
+                      {group.divisionName}
+                    </h3>
+                    <Badge variant="outline">
+                      {group.queuedMatches} queued • {group.items.length} bracket
+                      {group.items.length === 1 ? "" : "s"}
+                    </Badge>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {group.items.map((entry) => (
+                      <BracketQueueCard
+                        key={entry.bracketId}
+                        entry={entry}
+                        showDivision={false}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))
             )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Global queue</h2>
-          <Badge variant="outline">{totalQueued} waiting</Badge>
-        </div>
-        <QueueTable queue={globalQueue} />
-      </section>
-
-      <section className="space-y-5">
-        <h2 className="text-lg font-semibold">Queues by division</h2>
-        {divisionGroups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No brackets configured yet.</p>
-        ) : (
-          divisionGroups.map((group) => (
-            <section key={group.divisionId} id={`division-${group.divisionId}`} className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-base font-semibold text-foreground">{group.divisionName}</h3>
-                <Badge variant="outline">
-                  {group.queuedMatches} queued • {group.items.length} bracket
-                  {group.items.length === 1 ? "" : "s"}
-                </Badge>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                {group.items.map((entry) => (
-                  <BracketQueueCard key={entry.bracketId} entry={entry} showDivision={false} />
-                ))}
-              </div>
-            </section>
-          ))
-        )}
-      </section>
+          </section>
+        </>
+      )}
     </section>
   );
 }
