@@ -68,3 +68,14 @@ Singles,RR,INT,A18,Rising Star,Link,Hyrule,1991-05-05,,,,
 ```
 
 Use the integration test (`tests/tournaments.integration.test.js`) as a working reference for CSV structure and expected outcomes.
+
+### Exporting Existing Data
+
+Download the same consolidated CSV via:
+
+```
+GET /api/v1/tournaments/:slug/export
+Authorization: Bearer <token>
+```
+
+The response is `text/csv` with the identical header ordering documented above. Each row represents a registration (team + division pairing), so the file can be re-imported without altering column names. The export endpoint records an audit log entry with the number of rows emitted.

@@ -197,4 +197,5 @@ module.exports = {
   normalizeString,
   buildPlayerKey,
   buildTeamKey,
+  REQUIRED_COLUMNS,
 };
