@@ -6,6 +6,7 @@ type PageProps = {
   };
 };
 
-export default function Page({ params }: PageProps) {
-  return <PublicQueuePage slug={params.slug} />;
+export default async function Page({ params }: PageProps) {
+  const { slug } = await params;
+  return <PublicQueuePage slug={slug} />;
 }

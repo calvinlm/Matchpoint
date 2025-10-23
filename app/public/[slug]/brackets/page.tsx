@@ -6,6 +6,7 @@ type PageProps = {
   };
 };
 
-export default function Page({ params }: PageProps) {
-  return <PublicBracketsPage slug={params.slug} />;
+export default async function Page({ params }: PageProps) {
+  const { slug } = await params;
+  return <PublicBracketsPage slug={slug} />;
 }
