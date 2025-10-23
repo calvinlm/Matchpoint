@@ -1,4 +1,5 @@
 const request = require('supertest');
+const Papa = require('papaparse');
 const prisma = require('../src/lib/prisma');
 const app = require('../src/app');
 
@@ -281,5 +282,52 @@ Men's Doubles,DOUBLE,INT,A18,New Smash,Toad,Bros,1992-01-01,Mario,Bros,1985-01-0
     });
 
     expect(registrations.map((r) => r.entryCode)).toEqual(['18MDInt_001', '18MDInt_002']);
+  });
+
+  test('exports consolidated CSV for a tournament', async () => {
+    await request(app)
+      .post('/api/v1/tournaments')
+      .set(authHeader)
+      .send({ name: 'Export Test', slug: 'export-test' });
+
+    await request(app)
+      .post('/api/v1/tournaments/export-test/import')
+      .set(authHeader)
+      .send({ csv: SAMPLE_IMPORT_CSV });
+
+    const response = await request(app)
+      .get('/api/v1/tournaments/export-test/export')
+      .set(authHeader);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toMatch(/text\/csv/);
+
+    const parsed = Papa.parse(response.text, { header: true, skipEmptyLines: true });
+
+    expect(parsed.data).toHaveLength(5);
+
+    const mensRow = parsed.data.find((row) => row.teamName === 'Smash Bros');
+    expect(mensRow).toBeDefined();
+    expect(mensRow.divisionName).toBe("Men's Doubles");
+    expect(mensRow.player1First).toBe('Mario');
+    expect(mensRow.player2First).toBe('Luigi');
+    expect(mensRow.player1DOB).toBe('1985-01-01');
+    expect(mensRow.player2DOB).toBe('1987-02-02');
+
+    const womensRows = parsed.data.filter((row) => row.divisionName === "Women's Doubles");
+    expect(womensRows).toHaveLength(2);
+    womensRows.forEach((row) => {
+      expect(row.divisionLevel).toBe('ADV');
+    });
+  });
+
+  test('requires authentication for export', async () => {
+    await prisma.tournament.create({
+      data: { name: 'Export Unauthorized', slug: 'export-unauth' },
+    });
+
+    const response = await request(app).get('/api/v1/tournaments/export-unauth/export');
+
+    expect(response.statusCode).toBe(401);
   });
 });
