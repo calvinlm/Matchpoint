@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import CsvImportExportButtons from "../components/CsvImportExportButtons";
 import { useTournamentTeams, useUpdateTeam, useDeleteTeam } from "@/frontend/hooks/useTeams";
 import {
   useTournamentDivisions,
@@ -375,11 +376,14 @@ export default function TeamsPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Teams & registrations</h1>
-        <p className="text-sm text-muted-foreground">
-          Create teams, attach them to divisions, and manage their rosters.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Teams & registrations</h1>
+          <p className="text-sm text-muted-foreground">
+            Create teams, attach them to divisions, and manage their rosters.
+          </p>
+        </div>
+        <CsvImportExportButtons slug={slug} />
       </header>
 
       <RegistrationForm slug={slug} />

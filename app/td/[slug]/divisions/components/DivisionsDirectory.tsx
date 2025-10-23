@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import CsvImportExportButtons from "../../components/CsvImportExportButtons";
 import {
   useTournamentDivisions,
   useCreateDivision,
@@ -262,11 +263,14 @@ export default function DivisionsDirectory({ slug }: { slug: string }) {
 
   return (
     <main className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Divisions</h1>
-        <p className="text-sm text-muted-foreground">
-          Configure brackets, manage team registrations, and monitor queues per division.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Divisions</h1>
+          <p className="text-sm text-muted-foreground">
+            Configure brackets, manage team registrations, and monitor queues per division.
+          </p>
+        </div>
+        <CsvImportExportButtons slug={slug} />
       </header>
 
       <DivisionCreateForm slug={slug} />

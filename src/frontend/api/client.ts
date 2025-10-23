@@ -44,7 +44,10 @@ async function request<T>(url: string, { method = 'GET', body, token }: RequestO
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    const message = payload?.error || payload?.message || response.statusText;
+    const fallbackMessage = Array.isArray(payload?.errors)
+      ? payload.errors.join(', ')
+      : undefined;
+    const message = payload?.error || payload?.message || fallbackMessage || response.statusText;
     throw new Error(message);
   }
 
