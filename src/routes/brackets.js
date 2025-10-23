@@ -70,63 +70,14 @@ router.post(
         return res.status(error.status).json({ error: error.message });
       }
 
-      // Count how many brackets already exist in this division to determine the next group label
-      const existingBracketCount = await prisma.bracket.count({
-        where: { divisionId: division.id },
-      });
-
       const bracket = await prisma.bracket.create({
         data: {
           type,
-          name: `Group ${String.fromCharCode(64 + existingBracketCount + 1)}`, // A, B, C, etc.
           divisionId: division.id,
           config: sanitizedConfig,
           locked: Boolean(locked),
         },
       });
-
-      // Count how many brackets exist in this division including the newly created one
-      const bracketCount = existingBracketCount + 1;
-
-      // If there are 2 or more brackets, auto-generate a "Finals" bracket
-      if (bracketCount >= 2) {
-        const existingFinals = await prisma.bracket.findFirst({
-          where: {
-            divisionId: division.id,
-            type: 'FINALS',
-          },
-        });
-
-        // Only create a finals bracket if it doesn't already exist
-        if (!existingFinals) {
-          const finalsBracket = await prisma.bracket.create({
-            data: {
-              type: 'FINALS',
-              divisionId: division.id,
-              config: {
-                rounds: [
-                  { name: 'Semifinals', matches: [] },
-                  { name: 'Finals', matches: [] },
-                ],
-              },
-              locked: false,
-            },
-          });
-
-          await recordAuditLog({
-            actor: req.user?.email ?? 'unknown',
-            action: 'BRACKET_AUTO_CREATE',
-            resourceType: 'Bracket',
-            resourceId: finalsBracket.id,
-            metadata: {
-              tournamentId: tournament.id,
-              divisionId: division.id,
-              type: 'FINALS',
-            },
-          });
-        }
-      }
-
 
       await recordAuditLog({
         actor: req.user?.email ?? 'unknown',
