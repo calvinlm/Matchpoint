@@ -33,6 +33,26 @@ function normalizeDob(value) {
   return date.toISOString().slice(0, 10);
 }
 
+function buildGeneratedTeamName(playerEntries) {
+  const lastNames = playerEntries
+    .map((player) => normalizeString(player.lastName) || normalizeString(player.firstName))
+    .filter(Boolean);
+
+  if (lastNames.length > 0) {
+    return lastNames.join(' / ');
+  }
+
+  const fallbackFullNames = playerEntries
+    .map((player) => `${normalizeString(player.firstName)} ${normalizeString(player.lastName)}`.trim())
+    .filter(Boolean);
+
+  if (fallbackFullNames.length > 0) {
+    return fallbackFullNames.join(' / ');
+  }
+
+  return null;
+}
+
 function buildPlayerKey(firstName, lastName, dob) {
   return `${firstName.toLowerCase()}|${lastName.toLowerCase()}|${dob ?? ''}`;
 }
@@ -156,9 +176,10 @@ function parseConsolidatedCsv(csvString) {
 
     const teamKey = buildTeamKey(playerIds);
     if (!teamsByKey.has(teamKey)) {
+      const generatedTeamName = buildGeneratedTeamName(playerEntries);
       const team = {
         id: `team_${teams.length + 1}`,
-        name: row.teamName || playerEntries.map((p) => `${p.firstName} ${p.lastName}`.trim()).join(' / '),
+        name: row.teamName || generatedTeamName || `Team ${teams.length + 1}`,
         playerIds,
       };
       teamsByKey.set(teamKey, team);
@@ -197,4 +218,5 @@ module.exports = {
   normalizeString,
   buildPlayerKey,
   buildTeamKey,
+  REQUIRED_COLUMNS,
 };

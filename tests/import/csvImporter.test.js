@@ -47,4 +47,18 @@ describe('parseConsolidatedCsv', () => {
     const badCsv = 'divisionName,teamName\nExample,Team';
     expect(() => parseConsolidatedCsv(badCsv)).toThrow(/Missing required CSV columns/);
   });
+
+  test('generates a team name from player last names when missing', () => {
+    const generatedCsv = `divisionName,divisionFormat,divisionLevel,divisionAgeGroup,teamName,player1First,player1Last,player1DOB,player2First,player2Last,player2DOB,seedNote
+Open Doubles,DOUBLE,ADV,A18,,Alice,Anderson,2000-01-01,Bob,Baker,2000-02-02,
+Open Singles,SINGLE,ADV,A18,,Charlie,Chaplin,2001-03-03,,,,
+`;
+
+    const result = parseConsolidatedCsv(generatedCsv);
+
+    expect(result.teams).toHaveLength(2);
+    const [doublesTeam, singlesTeam] = result.teams;
+    expect(doublesTeam.name).toBe('Anderson / Baker');
+    expect(singlesTeam.name).toBe('Chaplin');
+  });
 });

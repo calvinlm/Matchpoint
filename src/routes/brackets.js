@@ -73,57 +73,11 @@ router.post(
       const bracket = await prisma.bracket.create({
         data: {
           type,
-          name: `Group ${String.fromCharCode(64 + bracketCount + 1)}`, // A, B, C, etc.
           divisionId: division.id,
           config: sanitizedConfig,
           locked: Boolean(locked),
         },
       });
-
-      // Count how many brackets exist in this division
-      const bracketCount = await prisma.bracket.count({
-        where: { divisionId: division.id },
-      });
-
-      // If there are 2 or more brackets, auto-generate a "Finals" bracket
-      if (bracketCount >= 2) {
-        const existingFinals = await prisma.bracket.findFirst({
-          where: {
-            divisionId: division.id,
-            type: 'FINALS',
-          },
-        });
-
-        // Only create a finals bracket if it doesn't already exist
-        if (!existingFinals) {
-          const finalsBracket = await prisma.bracket.create({
-            data: {
-              type: 'FINALS',
-              divisionId: division.id,
-              config: {
-                rounds: [
-                  { name: 'Semifinals', matches: [] },
-                  { name: 'Finals', matches: [] },
-                ],
-              },
-              locked: false,
-            },
-          });
-
-          await recordAuditLog({
-            actor: req.user?.email ?? 'unknown',
-            action: 'BRACKET_AUTO_CREATE',
-            resourceType: 'Bracket',
-            resourceId: finalsBracket.id,
-            metadata: {
-              tournamentId: tournament.id,
-              divisionId: division.id,
-              type: 'FINALS',
-            },
-          });
-        }
-      }
-
 
       await recordAuditLog({
         actor: req.user?.email ?? 'unknown',

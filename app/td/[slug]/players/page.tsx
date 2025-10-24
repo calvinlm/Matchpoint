@@ -1,12 +1,14 @@
 "use client";
 
 import React from "react";
+import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import CsvImportExportButtons from "../components/CsvImportExportButtons";
 import {
   usePlayers,
   useCreatePlayer,
@@ -235,13 +237,20 @@ function PlayerCard({ player }: { player: Player }) {
 
 export default function PlayersPage() {
   const [search, setSearch] = React.useState("");
+  const params = useParams<{ slug: string }>();
+  const slug = params?.slug;
   const playersQuery = usePlayers(search);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Players</h1>
-        <p className="text-sm text-muted-foreground">Maintain the player directory used by team rosters and seeding.</p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Players</h1>
+          <p className="text-sm text-muted-foreground">
+            Maintain the player directory used by team rosters and seeding.
+          </p>
+        </div>
+        {slug ? <CsvImportExportButtons slug={slug} /> : null}
       </header>
 
       <PlayerCreateForm />

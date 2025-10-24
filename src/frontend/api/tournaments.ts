@@ -182,6 +182,19 @@ const registrationUpdateSchema = z.object({
   teamName: z.string().nullable(),
 });
 
+const tournamentImportSummarySchema = z.object({
+  divisionsCreated: z.number().int().nonnegative(),
+  playersCreated: z.number().int().nonnegative(),
+  teamsCreated: z.number().int().nonnegative(),
+  registrationsCreated: z.number().int().nonnegative(),
+  entryCodes: z.array(
+    z.object({
+      divisionId: z.string(),
+      entryCode: z.string(),
+    }),
+  ),
+});
+
 export type TournamentSummary = z.infer<typeof tournamentSummarySchema>;
 export type TournamentListItem = z.infer<typeof tournamentListItemSchema>;
 export type TournamentDetail = z.infer<typeof tournamentDetailSchema>;
@@ -222,6 +235,18 @@ export function updateTournament(slug: string, payload: UpdateTournamentPayload,
 
 export function deleteTournament(slug: string, token?: string) {
   return apiClient.delete<void>(`${baseUrl}/tournaments/${slug}`, token);
+}
+
+export function exportTournamentCsv(slug: string, token?: string) {
+  return apiClient.get<string>(`${baseUrl}/tournaments/${slug}/export`, token);
+}
+
+export type TournamentImportSummary = z.infer<typeof tournamentImportSummarySchema>;
+
+export function importTournamentCsv(slug: string, csv: string, token?: string) {
+  return apiClient
+    .post<unknown>(`${baseUrl}/tournaments/${slug}/import`, { csv }, token)
+    .then((payload) => tournamentImportSummarySchema.parse(payload));
 }
 
 export function getTournamentSummary(slug: string, token?: string) {
