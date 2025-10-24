@@ -10,12 +10,12 @@ The `/api/v1/tournaments/:slug/import` endpoint ingests a single CSV that contai
 | `divisionFormat` | Format label (`DOUBLE`, `RR`, etc.) |
 | `divisionLevel` | Competitive level (`NOV`, `INT`, `ADV`, `OPN`) |
 | `divisionAgeGroup` | Age band (`A18`, `A35`, `JUNIOR`, …) |
-| `teamName` | Optional team label (auto-built from players if blank) |
+| `teamName` | Optional team label (auto-built from player last names if blank) |
 | `player1First`, `player1Last`, `player1DOB` | Primary player (DOB ISO-8601) |
 | `player2First`, `player2Last`, `player2DOB` | Optional partner |
 | `seedNote` | Optional note carried onto the registration |
 
-Blank rows are ignored; rows without any player names are rejected with a row-level error.
+Blank rows are ignored; rows without any player names are rejected with a row-level error. When the `teamName` column is left blank, the importer combines the players' last names (e.g., `Anderson / Baker`) to form the team name automatically.
 
 ### Deduplication Rules
 
