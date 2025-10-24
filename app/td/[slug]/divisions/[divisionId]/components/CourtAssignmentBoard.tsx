@@ -251,10 +251,10 @@ function MatchCard({
                   .filter((name) => name.length > 0)
                   .join(", ");
                 return (
-                  <div key={`${match.id}-${conflict.matchId}-${conflict.type}`}>
+                  <p key={`${match.id}-${conflict.matchId}-${conflict.type}`}>
                     Conflict with {opponentNames ?? "another match"}
                     {conflict.type === "PLAYER" && sharedPlayers ? ` — shared player${conflict.sharedPlayers.length > 1 ? "s" : ""}: ${sharedPlayers}` : " (team overlap)"}
-                  </div>
+                  </p>
                 );
               })}
             </AlertDescription>

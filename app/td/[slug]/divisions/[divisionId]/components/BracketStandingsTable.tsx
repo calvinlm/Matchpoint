@@ -26,7 +26,6 @@ interface StandingRow {
 
 export function BracketStandingsTable({ slug, bracketId, token, groups }: Props) {
   const { data, isLoading, isError, error } = useBracketStandings(slug, bracketId, token);
-  console.log("STANDINGS DATA:", data);
   if (isLoading) {
     return <div className="text-sm text-slate-500">Loading standings…</div>;
   }

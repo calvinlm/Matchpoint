@@ -71,6 +71,7 @@ export function BracketForm({ slug, divisionId, token }: Props) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const mutation = useCreateBracket(slug, divisionId, token);
+  const isSubmitting = mutation.isPending; 
 
   const isElimination =
     type === "SINGLE_ELIMINATION" || type === "DOUBLE_ELIMINATION";
@@ -279,8 +280,8 @@ export function BracketForm({ slug, divisionId, token }: Props) {
             </div>
           )}
 
-          <Button type="submit" className="w-full sm:w-auto" disabled={mutation.isLoading}>
-            {mutation.isLoading ? "Creating…" : "Create bracket"}
+          <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+            {isSubmitting ? "Creating…" : "Create bracket"}
           </Button>
 
           {(mutation.isError || errorMessage) && (
