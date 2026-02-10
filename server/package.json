@@ -1,0 +1,39 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18 <=20",
+    "npm": ">=9 <=10"
+  },
+  "engineStrict": true,
+  "scripts": {
+    "test": "cross-env NODE_ENV=test jest --runInBand",
+    "start": "cross-env node /server.js",
+    "dev": "node server.js",
+    "prisma:seed": "node prisma/seed.js",
+    "prisma:migrate:diff": "npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
+    "verify:api": "node scripts/verify-tournaments.js",
+    "simulate:tournament": "node scripts/simulations/simulateTournament.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/client": "^7.2.0",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "cross-env": "^10.1.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "papaparse": "^5.5.3",
+    "pg": "^8.17.1",
+    "prisma": "^7.2.0",
+    "supertest": "^6.3.4"
+  }
+}
