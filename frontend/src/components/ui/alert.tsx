@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { AlertTriangle, Info } from "lucide-react";
+import { AlertTriangle, Info, AlertCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -30,7 +30,7 @@ const Alert = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
 >(({ className, variant, ...props }, ref) => {
-  const Icon = ICON_BY_VARIANT[(variant ?? "default") as keyof typeof ICON_BY_VARIANT] ?? InfoIcon;
+  const Icon = ICON_BY_VARIANT[(variant ?? "default") as keyof typeof ICON_BY_VARIANT] ?? Info;
 
   return (
     <div ref={ref} role="alert" className={cn(alertVariants({ variant }), className)} {...props}>

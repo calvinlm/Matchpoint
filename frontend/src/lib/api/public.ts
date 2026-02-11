@@ -183,7 +183,7 @@ const publicBracketSchema = z.object({
   id: z.string(),
   type: z.string(),
   locked: z.boolean(),
-  config: z.record(z.any()),
+  config: z.record(z.string(), z.any()).default({}),
   seedings: z.array(publicBracketSeedSchema),
   matches: z.array(publicBracketMatchSchema),
 });

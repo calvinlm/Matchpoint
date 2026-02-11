@@ -168,19 +168,6 @@ export type BracketStandingRow = z.infer<typeof standingRowSchema>;
 export type BracketStandings = z.infer<typeof bracketStandingsSchema>;
 export { matchSummarySchema, matchScoreSchema };
 
-export interface TeamWithSeed {
-  teamId: string;
-  teamName: string;
-  entryCode: string | null;
-  seed: number | null;
-  players: Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    dateOfBirth: string | null;
-  }>;
-}
-
 export interface CreateBracketPayload {
   type: string;
   config: BracketConfig;

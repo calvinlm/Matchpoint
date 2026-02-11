@@ -24,7 +24,7 @@ const matchDetailSchema = z.object({
     id: z.string(),
     name: z.string(),
   }),
-  config: z.record(z.any()).default({}),
+  config: z.record(z.string(), z.any()).default({}),
   team1: matchPrintTeamSchema.nullable(),
   team2: matchPrintTeamSchema.nullable(),
   score: matchScoreSchema.nullable(),

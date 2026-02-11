@@ -10,7 +10,7 @@
   "engineStrict": true,
   "scripts": {
     "test": "cross-env NODE_ENV=test jest --runInBand",
-    "start": "cross-env node /server.js",
+    "start": "cross-env node server.js",
     "dev": "node server.js",
     "prisma:seed": "node prisma/seed.js",
     "prisma:migrate:diff": "npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
