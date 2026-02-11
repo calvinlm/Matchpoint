@@ -59,8 +59,15 @@ router.get('/:slug/standings', async (req, res) => {
               select: {
                 id: true,
                 type: true,
+                config: true,
+                seedings: {
+                  select: {
+                    teamId: true,
+                    seed: true,
+                  },
+                },
                 standings: {
-                  orderBy: { rank: 'asc' },
+                  orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
                   include: {
                     team: {
                       select: {
@@ -93,13 +100,60 @@ router.get('/:slug/standings', async (req, res) => {
       level: division.level,
       ageGroup: division.ageGroup,
       format: division.format,
-      brackets: division.brackets.map((bracket) => ({
-        id: bracket.id,
-        type: bracket.type,
-        standings: bracket.standings
-          .map((standing) => mapStandingRow(standing, division.id))
-          .filter((row) => row && row.rank != null),
-      })),
+      brackets: division.brackets.map((bracket) => {
+        const seedLookup = new Map((bracket.seedings ?? []).map((entry) => [entry.teamId, entry.seed]));
+        const groupCount = Number(bracket?.config?.groups ?? 1);
+        const groupSize = Number(bracket?.config?.groupSize ?? 0);
+
+        const standings = bracket.standings
+          .map((standing) => {
+            const row = mapStandingRow(standing, division.id);
+            if (!row || row.rank == null) {
+              return null;
+            }
+
+            return {
+              ...row,
+              seed: seedLookup.get(row.teamId) ?? null,
+            };
+          })
+          .filter(Boolean)
+          .sort((a, b) => {
+            if (a.seed == null && b.seed == null) return a.rank - b.rank;
+            if (a.seed == null) return 1;
+            if (b.seed == null) return -1;
+            return a.seed - b.seed;
+          })
+          .map((row) => {
+            if (groupCount > 1 && groupSize > 0 && row.seed != null) {
+              const groupIndex = Math.floor((row.seed - 1) / groupSize);
+              return {
+                ...row,
+                groupIndex,
+                groupKey: `Group ${String.fromCharCode(65 + groupIndex)}`,
+              };
+            }
+
+            return {
+              ...row,
+              groupIndex: 0,
+              groupKey: 'Group A',
+            };
+          })
+          .sort((a, b) => {
+            const groupDelta = (a.groupIndex ?? 0) - (b.groupIndex ?? 0);
+            if (groupDelta !== 0) return groupDelta;
+            return (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER);
+          });
+
+        return {
+          id: bracket.id,
+          type: bracket.type,
+          groups: groupCount > 0 ? groupCount : 1,
+          groupSize: groupSize > 0 ? groupSize : undefined,
+          standings,
+        };
+      }),
     }));
 
     res.set('Cache-Control', 'public, max-age=10, stale-while-revalidate=10');

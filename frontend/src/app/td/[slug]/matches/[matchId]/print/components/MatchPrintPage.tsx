@@ -74,7 +74,14 @@ export default function MatchPrintPage({ slug, matchId }: Props) {
     );
   }
 
-  const gamesToRender = Math.max(3, Number(data.config?.bestOf ?? 3));
+  const config = data.config as Record<string, unknown>;
+  const bestOf =
+    typeof config.bestOf === "number" && Number.isFinite(config.bestOf)
+      ? Math.max(1, Math.trunc(config.bestOf))
+      : 3;
+  const winByTwo = config.winBy2 === true;
+
+  const gamesToRender = Math.max(3, bestOf);
   const teamOne = data.team1;
   const teamTwo = data.team2;
 
@@ -89,7 +96,7 @@ export default function MatchPrintPage({ slug, matchId }: Props) {
           Tournament: {slug} • Division: {data.division.name} • Bracket: {data.bracketType.replace(/_/g, " ")}
         </p>
         <p className="text-xs text-slate-500">
-          Best of {data.config?.bestOf ?? 3} • Win by {data.config?.winBy2 ? "2" : "1"}
+          Best of {bestOf} • Win by {winByTwo ? "2" : "1"}
         </p>
         <div className="print:hidden">
           <button

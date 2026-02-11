@@ -120,6 +120,9 @@ const standingRowSchema = z.object({
   teamId: z.string(),
   teamName: z.string(),
   entryCode: z.string().nullable(),
+  seed: z.number().int().positive().nullable().optional(),
+  groupIndex: z.number().int().nonnegative().nullable().optional(),
+  groupKey: z.string().nullable().optional(),
   wins: z.number().int().nonnegative(),
   losses: z.number().int().nonnegative(),
   pointsFor: z.number().int().nonnegative(),
@@ -131,6 +134,8 @@ const standingRowSchema = z.object({
 const bracketStandingsSchema = z.object({
   bracketId: z.string(),
   type: z.string(),
+  groups: z.number().int().positive().optional(),
+  groupSize: z.number().int().positive().optional(),
   standings: z.array(standingRowSchema),
 });
 
@@ -162,19 +167,6 @@ export type MatchScore = z.infer<typeof matchScoreSchema>;
 export type BracketStandingRow = z.infer<typeof standingRowSchema>;
 export type BracketStandings = z.infer<typeof bracketStandingsSchema>;
 export { matchSummarySchema, matchScoreSchema };
-
-export interface TeamWithSeed {
-  teamId: string;
-  teamName: string;
-  entryCode: string | null;
-  seed: number | null;
-  players: Array<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    dateOfBirth: string | null;
-  }>;
-}
 
 export interface CreateBracketPayload {
   type: string;

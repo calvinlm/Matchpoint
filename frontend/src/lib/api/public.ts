@@ -5,6 +5,9 @@ const standingRowSchema = z.object({
   teamId: z.string(),
   teamName: z.string(),
   entryCode: z.string().nullable(),
+  seed: z.number().int().positive().nullable().optional(),
+  groupIndex: z.number().int().nonnegative().nullable().optional(),
+  groupKey: z.string().nullable().optional(),
   wins: z.number().int().nonnegative(),
   losses: z.number().int().nonnegative(),
   pointsFor: z.number().int().nonnegative(),
@@ -16,6 +19,8 @@ const standingRowSchema = z.object({
 const bracketStandingsSchema = z.object({
   id: z.string(),
   type: z.string(),
+  groups: z.number().int().positive().optional(),
+  groupSize: z.number().int().positive().optional(),
   standings: z.array(standingRowSchema),
 });
 
@@ -178,7 +183,7 @@ const publicBracketSchema = z.object({
   id: z.string(),
   type: z.string(),
   locked: z.boolean(),
-  config: z.record(z.any()),
+  config: z.record(z.string(), z.any()).default({}),
   seedings: z.array(publicBracketSeedSchema),
   matches: z.array(publicBracketMatchSchema),
 });

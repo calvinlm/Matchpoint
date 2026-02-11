@@ -219,28 +219,13 @@ export default function PublicBracketsPage({ slug }: Props) {
                   <CardTitle className="text-base font-semibold leading-snug text-foreground">
                     {division.name}
                   </CardTitle>
-                  {division.seedings.length > 0 && (
+                  {division.brackets.some((bracket) => bracket.seedings.length > 0) && (
                     <p className="text-xs text-muted-foreground">Seedings published</p>
                   )}
                 </div>
                 <Badge variant="outline">{division.brackets.length} brackets</Badge>
               </CardHeader>
               <CardContent className="space-y-4">
-                {division.seedings.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-foreground">Seedings</h3>
-                    {division.seedings[0].config?.groups ? (
-                      <GroupGrid
-                        seedings={division.seedings}
-                        groups={division.seedings[0].config.groups}
-                        kiosk={kiosk}
-                      />
-                    ) : (
-                      <SeedingsTable seedings={division.seedings} kiosk={kiosk} />
-                    )}
-                  </div>
-                )}
-
                 {division.brackets.map((bracket) => (
                   <div key={bracket.id} className="space-y-2 rounded-md border border-border bg-card/60 p-4">
                     <header className="flex flex-wrap items-center justify-between gap-2">
@@ -254,6 +239,22 @@ export default function PublicBracketsPage({ slug }: Props) {
                         {bracket.locked ? "Locked" : "Editing"}
                       </Badge>
                     </header>
+                    {bracket.seedings.length > 0 && (
+                      <div className="space-y-2">
+                        <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Seedings
+                        </h5>
+                        {typeof bracket.config.groups === "number" && bracket.config.groups > 0 ? (
+                          <GroupGrid
+                            seedings={bracket.seedings}
+                            groups={bracket.config.groups}
+                            kiosk={kiosk}
+                          />
+                        ) : (
+                          <SeedingsTable seedings={bracket.seedings} kiosk={kiosk} />
+                        )}
+                      </div>
+                    )}
                     <MatchesTable matches={bracket.matches} kiosk={kiosk} />
                   </div>
                 ))}
