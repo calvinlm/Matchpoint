@@ -106,10 +106,13 @@ function StandingTable({
   bracket: {
     id: string;
     type: string;
+    groups?: number;
     standings: Array<{
       teamId: string;
       teamName: string;
       entryCode: string | null;
+      groupIndex?: number | null;
+      groupKey?: string | null;
       wins: number;
       losses: number;
       pointsFor: number;
@@ -120,40 +123,93 @@ function StandingTable({
   };
   kiosk: boolean;
 }) {
+  const [viewMode, setViewMode] = useState<"stacked" | "tabs">("stacked");
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
+
   if (bracket.standings.length === 0) {
     return null;
   }
 
+  const grouped = bracket.standings.reduce<Record<string, typeof bracket.standings>>((acc, row) => {
+    const fallbackGroup = row.groupIndex != null ? `Group ${String.fromCharCode(65 + row.groupIndex)}` : "Group A";
+    const groupName = row.groupKey ?? fallbackGroup;
+    if (!acc[groupName]) {
+      acc[groupName] = [];
+    }
+    acc[groupName].push(row);
+    return acc;
+  }, {});
+
+  const groups = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
+  const resolvedActiveGroup = activeGroup && grouped[activeGroup] ? activeGroup : groups[0][0];
+  const visibleGroups = viewMode === "stacked" ? groups : groups.filter(([name]) => name === resolvedActiveGroup);
+
   return (
-    <div className="overflow-x-auto rounded-md border border-border">
-      <table className={`min-w-full divide-y divide-border ${kiosk ? "text-base" : "text-sm"}`}>
-        <thead className="bg-muted/60">
-          <tr className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <th className="px-3 py-2">Rank</th>
-            <th className="px-3 py-2">Team</th>
-            <th className="px-3 py-2 text-right">W</th>
-            <th className="px-3 py-2 text-right">L</th>
-            <th className="px-3 py-2 text-right">PF</th>
-            <th className="px-3 py-2 text-right">PA</th>
-            <th className="px-3 py-2 text-right">Quotient</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border bg-card">
-          {bracket.standings.map((row) => (
-            <tr key={row.teamId}>
-              <td className="px-3 py-2 font-medium text-foreground">{row.rank}</td>
-              <td className="px-3 py-2 text-foreground">
-                {row.entryCode ? `${row.entryCode} · ${row.teamName}` : row.teamName}
-              </td>
-              <td className="px-3 py-2 text-right text-muted-foreground">{row.wins}</td>
-              <td className="px-3 py-2 text-right text-muted-foreground">{row.losses}</td>
-              <td className="px-3 py-2 text-right text-muted-foreground">{row.pointsFor}</td>
-              <td className="px-3 py-2 text-right text-muted-foreground">{row.pointsAgainst}</td>
-              <td className="px-3 py-2 text-right text-muted-foreground">{row.quotient.toFixed(4)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-3">
+      {groups.length > 1 && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant={viewMode === "stacked" ? "default" : "outline"} onClick={() => setViewMode("stacked")}>
+              Stacked
+            </Button>
+            <Button size="sm" variant={viewMode === "tabs" ? "default" : "outline"} onClick={() => setViewMode("tabs")}>
+              Tabs
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {groups.map(([groupName]) => (
+              <Button
+                key={groupName}
+                size="sm"
+                variant={resolvedActiveGroup === groupName ? "default" : "outline"}
+                onClick={() => {
+                  setActiveGroup(groupName);
+                  setViewMode("tabs");
+                }}
+              >
+                {groupName}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {visibleGroups.map(([groupName, rows]) => (
+        <div key={groupName} className="space-y-2 rounded-md border border-border p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{groupName}</h4>
+          <div className="overflow-x-auto rounded-md border border-border">
+            <table className={`min-w-full divide-y divide-border ${kiosk ? "text-base" : "text-sm"}`}>
+              <thead className="bg-muted/60">
+                <tr className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <th className="px-3 py-2">Rank</th>
+                  <th className="px-3 py-2">Team</th>
+                  <th className="px-3 py-2 text-right">W</th>
+                  <th className="px-3 py-2 text-right">L</th>
+                  <th className="px-3 py-2 text-right">PF</th>
+                  <th className="px-3 py-2 text-right">PA</th>
+                  <th className="px-3 py-2 text-right">Quotient</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border bg-card">
+                {rows.map((row) => (
+                  <tr key={row.teamId}>
+                    <td className="px-3 py-2 font-medium text-foreground">{row.rank}</td>
+                    <td className="px-3 py-2 text-foreground">
+                      {row.entryCode ? `${row.entryCode} · ${row.teamName}` : row.teamName}
+                    </td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{row.wins}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{row.losses}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{row.pointsFor}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{row.pointsAgainst}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{row.quotient.toFixed(4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
