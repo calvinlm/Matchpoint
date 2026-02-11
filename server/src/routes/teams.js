@@ -218,7 +218,7 @@ router.post('/', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'TEAM_CREATE',
       resourceType: 'Team',
       resourceId: team.id,
@@ -326,7 +326,7 @@ router.patch('/:teamId', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'TEAM_UPDATE',
       resourceType: 'Team',
       resourceId: team.id,
@@ -365,7 +365,7 @@ router.delete('/:teamId', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'TEAM_DELETE',
       resourceType: 'Team',
       resourceId: existing.id,

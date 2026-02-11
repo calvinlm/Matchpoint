@@ -1,55 +1,26 @@
-/* Seed script to upsert a sample tournament and ensure courts 1..N exist. */
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+require('dotenv/config');
+const bcrypt = require('bcryptjs');
+const prisma = require('../src/lib/prisma');
 
 async function main() {
-  const slug = process.env.SEED_TOURNAMENT_SLUG || 'sample-open-2025';
-  const name = process.env.SEED_TOURNAMENT_NAME || 'Sample Open 2025';
-  const plannedCourtCount = Number(process.env.SEED_PLANNED_COURTS || 6);
-  const startDate = process.env.SEED_START_DATE
-    ? new Date(process.env.SEED_START_DATE)
-    : new Date();
+  const email = process.env.SEED_ADMIN_EMAIL || 'admin@example.com';
+  const password = process.env.SEED_ADMIN_PASSWORD || 'admin123';
+  const role = process.env.SEED_ADMIN_ROLE || 'ADMIN';
 
-  const tournament = await prisma.tournament.upsert({
-    where: { slug },
-    update: {
-      name,
-      plannedCourtCount,
-      startDate,
-    },
-    create: {
-      slug,
-      name,
-      plannedCourtCount,
-      startDate,
-      courts: {
-        create: Array.from({ length: plannedCourtCount }, (_, index) => ({
-          label: String(index + 1),
-        })),
-      },
-    },
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  await prisma.user.upsert({
+    where: { email },
+    update: { password: passwordHash, role },
+    create: { email, password: passwordHash, role },
   });
 
-  const courtData = Array.from({ length: plannedCourtCount }, (_, index) => ({
-    label: String(index + 1),
-    tournamentId: tournament.id,
-  }));
-
-  // Ensure all courts 1..N exist (skip duplicates for idempotency).
-  await prisma.court.createMany({
-    data: courtData,
-    skipDuplicates: true,
-  });
-
-  console.log(
-    `Seeded tournament "${tournament.name}" (${tournament.slug}) with ${plannedCourtCount} planned courts.`,
-  );
+  console.log(`Seeded admin user ${email} with role ${role}`);
 }
 
 main()
-  .catch((error) => {
-    console.error('Seeding error:', error);
+  .catch((err) => {
+    console.error('Seed failed', err);
     process.exit(1);
   })
   .finally(async () => {

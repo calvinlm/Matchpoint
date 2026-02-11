@@ -80,7 +80,7 @@ router.post(
       });
 
       await recordAuditLog({
-        actor: req.user?.email ?? 'unknown',
+        actor: req.user?.email ?? req.user?.sub ?? 'unknown',
         action: 'BRACKET_CREATE',
         resourceType: 'Bracket',
         resourceId: bracket.id,
@@ -144,7 +144,7 @@ router.patch(
       });
 
       await recordAuditLog({
-        actor: req.user?.email ?? 'unknown',
+        actor: req.user?.email ?? req.user?.sub ?? 'unknown',
         action: 'BRACKET_UPDATE',
         resourceType: 'Bracket',
         resourceId: updated.id,
@@ -189,7 +189,7 @@ router.delete('/:slug/brackets/:bracketId', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'BRACKET_DELETE',
       resourceType: 'Bracket',
       resourceId: bracket.id,
@@ -437,7 +437,7 @@ router.patch('/:slug/brackets/:bracketId/seeding', requireAuth, async (req, res)
     const result = await applySeeding({
       bracketId: bracket.id,
       entries,
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
     });
 
     return res.json(result);
@@ -561,7 +561,7 @@ router.patch('/:slug/brackets/:bracketId/matches/:matchId/assignment', requireAu
       matchId,
       courtId: courtId ?? null,
       startTime: parsedStartTime,
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
     });
 
     return res.json(result);
@@ -589,7 +589,7 @@ router.patch('/:slug/brackets/:bracketId/schedule/reschedule', requireAuth, asyn
       slug,
       bracketId,
       updates,
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
     });
 
     return res.json({ matches: result });
@@ -618,7 +618,7 @@ router.patch('/:slug/brackets/:bracketId/matches/:matchId/score', requireAuth, a
       bracketId,
       matchId,
       games,
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
     });
 
     return res.json(result);
@@ -646,7 +646,7 @@ router.post('/:slug/brackets/:bracketId/matches/retire', requireAuth, async (req
       slug,
       bracketId,
       matchIds,
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
     });
 
     return res.json({ matches: result });
@@ -675,7 +675,7 @@ router.post('/:slug/brackets/:bracketId/matches/swap', requireAuth, async (req, 
       bracketId,
       matchAId,
       matchBId,
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
     });
 
     return res.json({ matches: result });
@@ -703,7 +703,7 @@ router.patch('/:slug/brackets/:bracketId/queue', requireAuth, async (req, res) =
       slug,
       bracketId,
       paused,
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
     });
 
     return res.json(result);
@@ -731,7 +731,7 @@ router.patch('/:slug/brackets/:bracketId/queue/reorder', requireAuth, async (req
       slug,
       bracketId,
       order,
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
     });
 
     return res.json({ matches: result });
