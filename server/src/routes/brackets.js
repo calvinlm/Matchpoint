@@ -492,6 +492,13 @@ router.get('/:slug/brackets/:bracketId/standings', requireAuth, async (req, res)
         id: true,
         type: true,
         divisionId: true,
+        config: true,
+        seedings: {
+          select: {
+            teamId: true,
+            seed: true,
+          },
+        },
       },
     });
 
@@ -515,24 +522,59 @@ router.get('/:slug/brackets/:bracketId/standings', requireAuth, async (req, res)
           },
         },
       },
-      orderBy: { rank: 'asc' },
+      orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
     });
 
-    const payload = standings.map((row) => ({
-      teamId: row.teamId,
-      teamName: row.team?.name ?? 'Unknown Team',
-      entryCode: row.team?.registrations?.[0]?.entryCode ?? null,
-      wins: row.wins,
-      losses: row.losses,
-      pointsFor: row.pointsFor,
-      pointsAgainst: row.pointsAgainst,
-      quotient: Number(row.quotient ?? 0),
-      rank: row.rank,
-    }));
+    const seedLookup = new Map(bracket.seedings.map((entry) => [entry.teamId, entry.seed]));
+    const groupCount = Number(bracket?.config?.groups ?? 1);
+    const groupSize = Number(bracket?.config?.groupSize ?? 0);
+
+    const payload = standings
+      .map((row) => ({
+        teamId: row.teamId,
+        teamName: row.team?.name ?? 'Unknown Team',
+        entryCode: row.team?.registrations?.[0]?.entryCode ?? null,
+        seed: seedLookup.get(row.teamId) ?? null,
+        wins: row.wins,
+        losses: row.losses,
+        pointsFor: row.pointsFor,
+        pointsAgainst: row.pointsAgainst,
+        quotient: Number(row.quotient ?? 0),
+        rank: row.rank,
+      }))
+      .sort((a, b) => {
+        if (a.seed == null && b.seed == null) return (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER);
+        if (a.seed == null) return 1;
+        if (b.seed == null) return -1;
+        return a.seed - b.seed;
+      })
+      .map((row) => {
+        if (groupCount > 1 && groupSize > 0 && row.seed != null) {
+          const groupIndex = Math.floor((row.seed - 1) / groupSize);
+          return {
+            ...row,
+            groupIndex,
+            groupKey: `Group ${String.fromCharCode(65 + groupIndex)}`,
+          };
+        }
+
+        return {
+          ...row,
+          groupIndex: 0,
+          groupKey: 'Group A',
+        };
+      })
+      .sort((a, b) => {
+        const groupDelta = (a.groupIndex ?? 0) - (b.groupIndex ?? 0);
+        if (groupDelta !== 0) return groupDelta;
+        return (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER);
+      });
 
     return res.json({
       bracketId: bracket.id,
       type: bracket.type,
+      groups: groupCount > 0 ? groupCount : 1,
+      groupSize: groupSize > 0 ? groupSize : undefined,
       standings: payload,
     });
   } catch (error) {
