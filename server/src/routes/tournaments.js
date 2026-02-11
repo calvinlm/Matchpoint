@@ -273,7 +273,7 @@ router.post('/', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'TOURNAMENT_CREATE',
       resourceType: 'Tournament',
       resourceId: createdTournament.id,
@@ -420,7 +420,7 @@ router.post('/:slug/divisions', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'DIVISION_CREATE',
       resourceType: 'Division',
       resourceId: division.id,
@@ -558,7 +558,7 @@ router.patch('/:slug/divisions/:divisionId', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'DIVISION_UPDATE',
       resourceType: 'Division',
       resourceId: division.id,
@@ -602,7 +602,7 @@ router.delete('/:slug/divisions/:divisionId', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'DIVISION_DELETE',
       resourceType: 'Division',
       resourceId: division.id,
@@ -764,7 +764,7 @@ router.post('/:slug/divisions/:divisionId/registrations', requireAuth, async (re
     const { division, registration, teamName } = result;
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'REGISTRATION_CREATE',
       resourceType: 'Registration',
       resourceId: registration.id,
@@ -853,7 +853,7 @@ router.patch('/:slug/divisions/:divisionId/registrations/:registrationId', requi
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'REGISTRATION_UPDATE',
       resourceType: 'Registration',
       resourceId: registration.id,
@@ -922,7 +922,7 @@ router.delete('/:slug/divisions/:divisionId/registrations/:registrationId', requ
     }
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'REGISTRATION_DELETE',
       resourceType: 'Registration',
       resourceId: registration.id,
@@ -1061,7 +1061,7 @@ router.patch('/:slug', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'TOURNAMENT_UPDATE',
       resourceType: 'Tournament',
       resourceId: result.id,
@@ -1105,7 +1105,7 @@ router.delete('/:slug', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'TOURNAMENT_DELETE',
       resourceType: 'Tournament',
       resourceId: existing.id,
@@ -1443,7 +1443,7 @@ router.get('/:slug/export', requireAuth, async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'TOURNAMENT_EXPORT',
       resourceType: 'Tournament',
       resourceId: tournament.id,
@@ -1660,7 +1660,7 @@ router.post('/:slug/import', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'TOURNAMENT_IMPORT',
       resourceType: 'Tournament',
       resourceId: tournament.id,

@@ -1,24 +1,36 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { validateAuthConfiguration, tdEmail, tdPasswordHash, jwtSecret } = require('../config/auth');
+const { validateAuthConfiguration, jwtSecret, jwtExpires } = require('../config/auth');
+const prisma = require('../lib/prisma');
 
 validateAuthConfiguration();
 
 async function verifyCredentials(email, password) {
-  if (email !== tdEmail()) {
-    return false;
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    return null;
   }
 
-  const hash = tdPasswordHash();
-  if (!hash) {
-    return false;
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) {
+    return null;
   }
 
-  return bcrypt.compare(password, hash);
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+  };
 }
 
-function issueToken(payload) {
-  return jwt.sign(payload, jwtSecret(), { expiresIn: '12h' });
+function issueToken(user) {
+  const payload = {
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+  };
+
+  return jwt.sign(payload, jwtSecret(), { expiresIn: jwtExpires() });
 }
 
 module.exports = {

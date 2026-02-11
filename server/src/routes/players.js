@@ -100,7 +100,7 @@ router.post('/', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'PLAYER_CREATE',
       resourceType: 'Player',
       resourceId: player.id,
@@ -186,7 +186,7 @@ router.patch('/:playerId', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'PLAYER_UPDATE',
       resourceType: 'Player',
       resourceId: updated.id,
@@ -218,7 +218,7 @@ router.delete('/:playerId', requireAuth, async (req, res) => {
     });
 
     await recordAuditLog({
-      actor: req.user?.email ?? 'unknown',
+      actor: req.user?.email ?? req.user?.sub ?? 'unknown',
       action: 'PLAYER_DELETE',
       resourceType: 'Player',
       resourceId: existing.id,

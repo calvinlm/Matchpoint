@@ -11,12 +11,12 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    const valid = await verifyCredentials(email, password);
-    if (!valid) {
+    const user = await verifyCredentials(email, password);
+    if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = issueToken({ email });
+    const token = issueToken(user);
     return res.json({ token });
   } catch (error) {
     console.error('Login error', error);

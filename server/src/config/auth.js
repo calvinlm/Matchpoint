@@ -6,22 +6,21 @@ if (process.env.NODE_ENV === 'test') {
   dotenv.config();
 }
 
-const REQUIRED_ENV_VARS = ['TD_EMAIL', 'TD_PASSWORD_HASH', 'TD_JWT_SECRET'];
+const REQUIRED_ENV_VARS = ['TD_JWT_SECRET'];
 
 function validateAuthConfiguration() {
   const missing = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     throw new Error(
-      `Missing auth configuration. Set ${missing.join(', ')} environment variable${
+      `Missing JWT configuration. Set ${missing.join(', ')} environment variable${
         missing.length > 1 ? 's' : ''
-      }.`
+      } to sign auth tokens.`
     );
   }
 }
 
 module.exports = {
   validateAuthConfiguration,
-  tdEmail: () => process.env.TD_EMAIL,
-  tdPasswordHash: () => process.env.TD_PASSWORD_HASH,
   jwtSecret: () => process.env.TD_JWT_SECRET,
+  jwtExpires: () => process.env.TD_JWT_EXPIRES || '12h',
 };
