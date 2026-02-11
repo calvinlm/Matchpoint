@@ -7,6 +7,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -110,9 +111,7 @@ export function BracketSeedingBoard({
     return <div>No registered teams for this division.</div>;
   }
 
-  const handleDragEnd = (
-    event: Parameters<NonNullable<DndContext["props"]["onDragEnd"]>>[0],
-  ) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (!over || active.id === over.id) {
@@ -152,9 +151,9 @@ export function BracketSeedingBoard({
           type="button"
           className="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white disabled:opacity-60"
           onClick={handleSave}
-          disabled={applySeeding.isLoading}
+          disabled={applySeeding.isPending}
         >
-          {applySeeding.isLoading ? "Saving…" : "Save seeding"}
+          {applySeeding.isPending ? "Saving…" : "Save seeding"}
         </button>
       </header>
 

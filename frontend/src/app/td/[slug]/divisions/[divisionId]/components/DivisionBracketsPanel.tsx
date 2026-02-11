@@ -108,9 +108,9 @@ export function DivisionBracketsPanel({ slug, divisionId, token }: Props) {
                     payload: { locked: !bracket.locked },
                   })
                 }
-                disabled={updateMutation.isLoading}
+                disabled={updateMutation.isPending}
               >
-                {updateMutation.isLoading ? "Updating…" : bracket.locked ? "Unlock" : "Lock"}
+                {updateMutation.isPending ? "Updating…" : bracket.locked ? "Unlock" : "Lock"}
               </Button>
               <Button
                 variant="destructive"

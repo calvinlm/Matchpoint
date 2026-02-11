@@ -5,6 +5,7 @@ import type {
   Bracket,
   UpdateBracketPayload,
 } from "@/hooks/useBrackets";
+import type { BracketConfig } from "@/lib/api/brackets";
 import { useUpdateBracket } from "@/hooks/useBrackets";
 
 const BRACKET_TYPES = [
@@ -41,18 +42,18 @@ export function BracketEditModal({ slug, bracket, onClose, token }: Props) {
     setPayload({ config: bracket.config });
   }, [bracket]);
 
-  const config = payload.config ?? bracket.config;
+  const config: BracketConfig = payload.config ?? bracket.config;
 
-  const setConfig = (next: UpdateBracketPayload["config"]) => {
+  const setConfig = (next: BracketConfig) => {
     setPayload((prev) => ({
       ...prev,
       config: next,
     }));
   };
 
-  const updateConfigField = <K extends keyof UpdateBracketPayload["config"]>(
+  const updateConfigField = <K extends keyof BracketConfig>(
     key: K,
-    value: UpdateBracketPayload["config"][K],
+    value: BracketConfig[K],
   ) => {
     setConfig({
       ...config,
@@ -256,9 +257,9 @@ export function BracketEditModal({ slug, bracket, onClose, token }: Props) {
           <button
             type="submit"
             className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-            disabled={updateMutation.isLoading}
+            disabled={updateMutation.isPending}
           >
-            {updateMutation.isLoading ? "Saving…" : "Save changes"}
+            {updateMutation.isPending ? "Saving…" : "Save changes"}
           </button>
         </footer>
 
