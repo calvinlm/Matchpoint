@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "engines": {
-    "node": ">=18 <=20",
+    "node": "24.x",
     "npm": ">=9 <=10"
   },
   "engineStrict": true,
