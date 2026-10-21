@@ -187,7 +187,7 @@ export function TournamentQueuePanel({ slug, token }: Props) {
   // Guard inside, not around, hooks
   const queues = data?.queues ?? [];
   const globalQueue = data?.globalQueue ?? [];
-  const updatedAt = data?.updatedAt ?? Date.now();
+  const updatedAt = data?.updatedAt;
   const tournamentName = data?.tournamentName ?? "Live Queue";
 
   const divisionGroups = React.useMemo(() => {
@@ -242,14 +242,16 @@ export function TournamentQueuePanel({ slug, token }: Props) {
                 {tournamentName}
               </h1>
               <p className="text-sm text-muted-foreground">Tournament slug: {slug}</p>
-              <p className="text-xs text-muted-foreground">
-                Updated{" "}
-                {new Date(updatedAt).toLocaleTimeString(undefined, {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                })}
-              </p>
+              {updatedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Updated{" "}
+                  {new Date(updatedAt).toLocaleTimeString(undefined, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button asChild variant="outline" size="sm">

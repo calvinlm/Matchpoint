@@ -337,4 +337,7 @@ async function submitMatchScore({ slug, bracketId, matchId, games, actor }) {
 
 module.exports = {
   submitMatchScore,
+  // Exported for unit tests.
+  ensureGamesArray,
+  evaluateGames,
 };

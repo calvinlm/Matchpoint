@@ -180,6 +180,7 @@ export function DivisionBracketsPanel({ slug, divisionId, token }: Props) {
 
       {editing && (
         <BracketEditModal
+          key={editing.id}
           slug={slug}
           bracket={editing}
           token={token}

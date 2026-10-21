@@ -362,6 +362,9 @@ export default function TeamsPage() {
   // ✅ read the dynamic route param from the client-side hook
   const { slug } = useParams<{ slug: string }>();
 
+  // Hooks must run on every render; the query stays disabled until slug exists.
+  const teamsQuery = useTournamentTeams(slug ?? "");
+
   // (optional safety) if slug is ever undefined momentarily
   if (!slug) {
     return (
@@ -371,8 +374,6 @@ export default function TeamsPage() {
       </main>
     );
   }
-
-  const teamsQuery = useTournamentTeams(slug);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8">

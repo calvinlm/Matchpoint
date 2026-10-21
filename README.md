@@ -29,11 +29,11 @@ Matchpoint is a tournament operations platform with two apps in one repository:
 
 ## Prerequisites
 
-- **Node.js** `>=18 <=20`
-- **npm** `>=9 <=10`
+- **Node.js** `24.x` (with fnm: `fnm install 24 && fnm use 24`)
+- **npm** `>=10`
 - A running PostgreSQL database (for the API)
 
-> Both `frontend/package.json` and `server/package.json` enforce the same Node/NPM engine range.
+> Both `frontend/package.json` and `server/package.json` pin Node `24.x`. After changing Node versions, delete `node_modules` and run `npm ci` again; the server's `postinstall` regenerates the Prisma client.
 
 ## Environment configuration
 
@@ -43,17 +43,19 @@ Create a `.env` file in `server/` with at least:
 
 ```bash
 DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<database>
-TD_EMAIL=director@example.com
-TD_PASSWORD_HASH=<bcrypt-hash>
 TD_JWT_SECRET=<long-random-secret>
+# Used by the seed script to create or update the admin login
+SEED_ADMIN_EMAIL=you@example.com
+SEED_ADMIN_PASSWORD=<at least 12 characters>
 # Optional
-CORS_ALLOW_ORIGIN=http://localhost:3100
+SEED_ADMIN_ROLE=ADMIN
+CORS_ALLOW_ORIGIN=http://localhost:3000
 PORT=8080
 ```
 
 Notes:
-- Auth config is required at runtime (`TD_EMAIL`, `TD_PASSWORD_HASH`, `TD_JWT_SECRET`).
-- In development, if `CORS_ALLOW_ORIGIN` is unset, server defaults to `http://localhost:3100`.
+- `TD_JWT_SECRET` is required at runtime. Logins are stored in the `User` table and created by the seed script.
+- `CORS_ALLOW_ORIGIN` is a comma-separated list of allowed origins. An entry may contain one `*` in the host to cover preview deployments, e.g. `https://matchpoint.example.com,https://matchpoint-*.vercel.app`. In development, if unset, it allows `http://localhost:3000` and `http://localhost:3100`.
 
 ### Frontend (`frontend/.env.local`)
 
@@ -87,12 +89,13 @@ For local development where you control schema changes:
 npx prisma migrate dev
 ```
 
-Optional seed scripts:
+Create or update the admin login (requires `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`; there are no defaults):
 
 ```bash
 npm run prisma:seed
-node prisma/seedUser.js
 ```
+
+Running it again with a new `SEED_ADMIN_PASSWORD` changes that user's password.
 
 ## Run locally
 
@@ -179,3 +182,17 @@ GET /health
 ---
 
 If you are extending functionality, keep backend domain logic in `server/src/services/` and keep route handlers focused on validation + orchestration.
+
+## Tests
+
+From `server/`, with a disposable Postgres database whose name contains "test" (the suite empties it):
+
+```bash
+cp .env.test.example .env.test   # then edit DATABASE_URL
+npx prisma migrate deploy        # with DATABASE_URL pointing at the test database
+npm test
+```
+
+`npm run seed:qa` creates the QA Test Open 2026 tournament (2 courts, 6 teams, seeded round robin) in the database from `.env`, for manual testing in the director console.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs the server tests against Postgres 16 and the frontend lint, type check and build on Node 24 for every push to `main` and every pull request.
