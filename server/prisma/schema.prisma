@@ -47,6 +47,14 @@ enum AdvancementPlacement {
   LOSER
 }
 
+enum MatchStatus {
+  PENDING
+  CALLED
+  ACTIVE
+  COMPLETED
+  RETIRED
+}
+
 model Tournament {
   id                String      @id @default(cuid())
   slug              String      @unique
@@ -84,6 +92,7 @@ model Bracket {
   type       BracketType
   config     Json
   locked     Boolean      @default(false)
+  queuePaused Boolean     @default(false)
   matches    Match[]
   standings  Standing[]
   seedings   BracketSeeding[]
@@ -107,6 +116,16 @@ model Match {
   court     Court?   @relation(fields: [courtId], references: [id])
   score     Json?
   startTime DateTime?
+  status            MatchStatus @default(PENDING)
+  queueOrder        Int?
+  manuallyOrderedAt DateTime?
+  round             Int?
+  groupIndex        Int?
+  heldAt            DateTime?
+  pinnedCourtId     String?
+  calledAt          DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   advancementsFrom MatchAdvancement[] @relation("AdvancementFromMatch")
@@ -114,6 +133,7 @@ model Match {
 
   @@index([bracketId])
   @@index([courtId])
+  @@index([bracketId, status, queueOrder])
 }
 
 model Standing {

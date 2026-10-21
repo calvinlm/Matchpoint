@@ -21,7 +21,7 @@ Branch: `fix/p1-1-persist-live-state`.
 
 **Migration** (`npx prisma migrate dev --name persist_live_state`):
 - `enum MatchStatus { PENDING CALLED ACTIVE COMPLETED RETIRED }`
-- `Match`: `status MatchStatus @default(PENDING)`, `queueOrder Int?`, `manuallyOrderedAt DateTime?`, `round Int?`, `groupIndex Int?`, `heldAt DateTime?`, `pinnedCourtId String?`, `calledAt DateTime?`, `startedAt` (exists), `completedAt DateTime?`; `@@index([bracketId, status, queueOrder])`. (`round`, `groupIndex`, `heldAt`, `pinnedCourtId`, `calledAt` are added now so Phase 1 needs one migration; P1-2 and P1-4 start using them.)
+- `Match`: `status MatchStatus @default(PENDING)`, `queueOrder Int?`, `manuallyOrderedAt DateTime?`, `round Int?`, `groupIndex Int?`, `heldAt DateTime?`, `pinnedCourtId String?`, `calledAt DateTime?`, `startedAt DateTime?` (new: the existing `startTime` doubles as a scheduled time; the backfill copies it into `startedAt` for matches on court), `completedAt DateTime?`; `@@index([bracketId, status, queueOrder])`. (`round`, `groupIndex`, `heldAt`, `pinnedCourtId`, `calledAt` are added now so Phase 1 needs one migration; P1-2 and P1-4 start using them.)
 - `Bracket`: `queuePaused Boolean @default(false)`
 - Backfill in the same migration SQL:
   - `status = 'COMPLETED'` and `completedAt = updatedAt` where `winnerId IS NOT NULL`
