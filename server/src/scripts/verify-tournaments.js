@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../app');
-const prisma = require('../src/lib/prisma');
+const prisma = require('../lib/prisma');
 
 async function run() {
   if (!process.env.DATABASE_URL) {

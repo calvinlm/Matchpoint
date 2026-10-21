@@ -1,7 +1,7 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const requireAuth = require('../middleware/requireAuth');
-const { validateBracketConfig } = require('../../../frontend/src/config/brackets/configValidation');
+const { validateBracketConfig } = require('../config/bracketConfigValidation');
 const { recordAuditLog } = require('../services/audit');
 const { applySeeding } = require('../services/seeding');
 const {
