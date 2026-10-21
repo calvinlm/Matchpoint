@@ -15,7 +15,8 @@
     "prisma:migrate:diff": "npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
     "verify:api": "node src/scripts/verify-tournaments.js",
     "simulate:tournament": "node src/scripts/simulations/simulateTournament.js",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "seed:qa": "node prisma/seed-qa.js"
   },
   "keywords": [],
   "author": "",
