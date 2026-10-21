@@ -43,17 +43,19 @@ Create a `.env` file in `server/` with at least:
 
 ```bash
 DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<database>
-TD_EMAIL=director@example.com
-TD_PASSWORD_HASH=<bcrypt-hash>
 TD_JWT_SECRET=<long-random-secret>
+# Used by the seed script to create or update the admin login
+SEED_ADMIN_EMAIL=you@example.com
+SEED_ADMIN_PASSWORD=<at least 12 characters>
 # Optional
-CORS_ALLOW_ORIGIN=http://localhost:3100
+SEED_ADMIN_ROLE=ADMIN
+CORS_ALLOW_ORIGIN=http://localhost:3000
 PORT=8080
 ```
 
 Notes:
-- Auth config is required at runtime (`TD_EMAIL`, `TD_PASSWORD_HASH`, `TD_JWT_SECRET`).
-- In development, if `CORS_ALLOW_ORIGIN` is unset, server defaults to `http://localhost:3100`.
+- `TD_JWT_SECRET` is required at runtime. Logins are stored in the `User` table and created by the seed script.
+- In development, if `CORS_ALLOW_ORIGIN` is unset, server defaults to `http://localhost:3100`; the frontend dev server runs on port 3000, so set it explicitly.
 
 ### Frontend (`frontend/.env.local`)
 
@@ -87,12 +89,13 @@ For local development where you control schema changes:
 npx prisma migrate dev
 ```
 
-Optional seed scripts:
+Create or update the admin login (requires `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`; there are no defaults):
 
 ```bash
 npm run prisma:seed
-node prisma/seedUser.js
 ```
+
+Running it again with a new `SEED_ADMIN_PASSWORD` changes that user's password.
 
 ## Run locally
 
