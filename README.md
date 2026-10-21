@@ -29,11 +29,11 @@ Matchpoint is a tournament operations platform with two apps in one repository:
 
 ## Prerequisites
 
-- **Node.js** `>=18 <=20`
-- **npm** `>=9 <=10`
+- **Node.js** `24.x` (with fnm: `fnm install 24 && fnm use 24`)
+- **npm** `>=10`
 - A running PostgreSQL database (for the API)
 
-> Both `frontend/package.json` and `server/package.json` enforce the same Node/NPM engine range.
+> Both `frontend/package.json` and `server/package.json` pin Node `24.x`. After changing Node versions, delete `node_modules` and run `npm ci` again; the server's `postinstall` regenerates the Prisma client.
 
 ## Environment configuration
 
@@ -55,7 +55,7 @@ PORT=8080
 
 Notes:
 - `TD_JWT_SECRET` is required at runtime. Logins are stored in the `User` table and created by the seed script.
-- In development, if `CORS_ALLOW_ORIGIN` is unset, server defaults to `http://localhost:3100`; the frontend dev server runs on port 3000, so set it explicitly.
+- `CORS_ALLOW_ORIGIN` is a comma-separated list of allowed origins. An entry may contain one `*` in the host to cover preview deployments, e.g. `https://matchpoint.example.com,https://matchpoint-*.vercel.app`. In development, if unset, it allows `http://localhost:3000` and `http://localhost:3100`.
 
 ### Frontend (`frontend/.env.local`)
 

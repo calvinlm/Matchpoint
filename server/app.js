@@ -1,4 +1,5 @@
 const express = require('express');
+const { parseAllowedOrigins, isOriginAllowed } = require('./src/config/cors');
 const authRouter = require('./src/routes/auth');
 const tournamentsRouter = require('./src/routes/tournaments');
 const bracketsRouter = require('./src/routes/brackets');
@@ -10,15 +11,17 @@ const app = express();
 
 app.use(express.json());
 
-const corsAllowedOrigin =
-  process.env.CORS_ALLOW_ORIGIN || (process.env.NODE_ENV === 'development' ? 'http://localhost:3100' : '');
+const allowedOrigins = parseAllowedOrigins(process.env.CORS_ALLOW_ORIGIN);
 
 app.use((req, res, next) => {
-  if (corsAllowedOrigin === '*') {
-    res.header('Access-Control-Allow-Origin', '*');
-  } else if (corsAllowedOrigin && req.headers.origin === corsAllowedOrigin) {
-    res.header('Access-Control-Allow-Origin', corsAllowedOrigin);
+  const { origin } = req.headers;
+
+  res.header('Vary', 'Origin');
+  if (isOriginAllowed(origin, allowedOrigins)) {
+    res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
+  } else if (allowedOrigins.allowAny) {
+    res.header('Access-Control-Allow-Origin', '*');
   }
 
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
