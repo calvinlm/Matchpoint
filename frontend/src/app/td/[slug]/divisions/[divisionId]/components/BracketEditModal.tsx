@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import type {
   Bracket,
   UpdateBracketPayload,
@@ -37,10 +37,6 @@ export function BracketEditModal({ slug, bracket, onClose, token }: Props) {
     bracket.type === "SINGLE_ELIMINATION" ||
     bracket.type === "DOUBLE_ELIMINATION";
   const isRoundRobin = bracket.type === "ROUND_ROBIN";
-
-  useEffect(() => {
-    setPayload({ config: bracket.config });
-  }, [bracket]);
 
   const config: BracketConfig = payload.config ?? bracket.config;
 
