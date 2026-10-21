@@ -182,3 +182,17 @@ GET /health
 ---
 
 If you are extending functionality, keep backend domain logic in `server/src/services/` and keep route handlers focused on validation + orchestration.
+
+## Tests
+
+From `server/`, with a disposable Postgres database whose name contains "test" (the suite empties it):
+
+```bash
+cp .env.test.example .env.test   # then edit DATABASE_URL
+npx prisma migrate deploy        # with DATABASE_URL pointing at the test database
+npm test
+```
+
+`npm run seed:qa` creates the QA Test Open 2026 tournament (2 courts, 6 teams, seeded round robin) in the database from `.env`, for manual testing in the director console.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs the server tests against Postgres 16 and the frontend lint, type check and build on Node 24 for every push to `main` and every pull request.
