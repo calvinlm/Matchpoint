@@ -21,7 +21,7 @@ IDs: B = audit bug, S = security, Q = queue fairness, QA = live QA finding (Oct 
 
 Gate: QA Test Open 2026 on 2 courts — no idle court while an eligible match exists, no team plays more than 2 in a row, restart-safe.
 
-- [ ] P1-1 Persist live state; queue pause on `Bracket.queuePaused`, enforced server-side (B1, Q5) — T02
+- [x] P1-1 Persist live state; queue pause on `Bracket.queuePaused`, enforced server-side (B1, Q5) — T02
 - [ ] P1-2 Round robin by rounds, snake groups, balanced sizes (Q1–Q3, QA-1) — T03–T05
 - [ ] P1-3 Spaced `queueOrder` reordering (QA-3) — T07
 - [ ] P1-4 Server-side tiered picker, assign-next endpoint (QA-2, Q6) — T06, T08
