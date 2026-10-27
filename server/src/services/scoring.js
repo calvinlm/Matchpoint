@@ -1,10 +1,5 @@
 const prisma = require('../lib/prisma');
 const { recordAuditLog } = require('./audit');
-const {
-  setMatchStatusOverride,
-  clearMatchStatusOverride,
-  clearQueuePriorityOverride,
-} = require('./scheduling');
 const { recalculateBracketStandings } = require('./standings');
 
 function determineLoserId({ match, winnerId }) {
@@ -254,13 +249,15 @@ async function submitMatchScore({ slug, bracketId, matchId, games, actor }) {
 
   const completedAt = new Date();
 
-  const { result: updated, advancements } = await prisma.$transaction(async (tx) => {
+  const { result: updated } = await prisma.$transaction(async (tx) => {
     const result = await tx.match.update({
       where: { id: match.id },
       data: {
         winnerId,
         courtId: null,
         startTime: match.startTime ?? completedAt,
+        status: 'COMPLETED',
+        completedAt,
         score: {
           games: sanitizedGames,
           bestOf: Number(config.bestOf ?? sanitizedGames.length),
@@ -308,17 +305,6 @@ async function submitMatchScore({ slug, bracketId, matchId, games, actor }) {
 
     return { result, advancements: advancementUpdates };
   });
-
-  clearQueuePriorityOverride(updated.id);
-  setMatchStatusOverride(updated.id, 'COMPLETED');
-
-  advancements
-    .filter((entry) => entry.updated)
-    .forEach((entry) => {
-      clearQueuePriorityOverride(entry.matchId);
-      clearMatchStatusOverride(entry.matchId);
-      setMatchStatusOverride(entry.matchId, 'PENDING');
-    });
 
   return {
     id: updated.id,

@@ -1,73 +1,20 @@
 const prisma = require('../lib/prisma');
 const { recordAuditLog } = require('./audit');
 
-const queuePriorityOverrides = new Map();
-const matchStatusOverrides = new Map();
-const queuePauseOverrides = new Map();
-
-function setMatchStatusOverride(matchId, status) {
-  if (!matchId) {
-    return;
+// Queue order: lowest queueOrder first, matches without one last, then oldest first.
+function compareQueueOrder(a, b) {
+  if (a.queueOrder !== b.queueOrder) {
+    if (a.queueOrder == null) return 1;
+    if (b.queueOrder == null) return -1;
+    return a.queueOrder - b.queueOrder;
   }
 
-  if (status) {
-    matchStatusOverrides.set(matchId, status);
-    return;
+  const createdDiff = a.createdAt.getTime() - b.createdAt.getTime();
+  if (createdDiff !== 0) {
+    return createdDiff;
   }
 
-  matchStatusOverrides.delete(matchId);
-}
-
-function clearMatchStatusOverride(matchId) {
-  if (!matchId) {
-    return;
-  }
-
-  matchStatusOverrides.delete(matchId);
-}
-
-function clearQueuePriorityOverride(matchId) {
-  if (!matchId) {
-    return;
-  }
-
-  queuePriorityOverrides.delete(matchId);
-}
-
-function getPriorityValue(match) {
-  if (queuePriorityOverrides.has(match.id)) {
-    return queuePriorityOverrides.get(match.id);
-  }
-
-  if (typeof match.priority === 'number') {
-    return match.priority;
-  }
-
-  return 0;
-}
-
-function getStatusValue(match) {
-  if (matchStatusOverrides.has(match.id)) {
-    return matchStatusOverrides.get(match.id);
-  }
-
-  if (typeof match.status === 'string' && match.status.length > 0) {
-    return match.status;
-  }
-
-  return 'PENDING';
-}
-
-function getQueuePausedValue(bracket) {
-  if (queuePauseOverrides.has(bracket.id)) {
-    return queuePauseOverrides.get(bracket.id);
-  }
-
-  if (typeof bracket.queuePaused === 'boolean') {
-    return bracket.queuePaused;
-  }
-
-  return false;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
 function pickEntryCode(team, divisionId) {
@@ -230,15 +177,18 @@ function normalizeScore(score) {
   };
 }
 
-function mapMatchToSummary(match, divisionId, conflicts = []) {
+// `priority` is kept for the client's schema until P1-3 switches it to `queueOrder`:
+// callers pass a value derived from queue position (higher = sooner), 0 when not queued.
+function mapMatchToSummary(match, divisionId, conflicts = [], priority = 0) {
   return {
     id: match.id,
     bracketId: match.bracketId,
     divisionId: match.bracket.divisionId,
     courtId: match.courtId,
     startTime: match.startTime ? match.startTime.toISOString() : null,
-    priority: getPriorityValue(match),
-    status: getStatusValue(match),
+    priority,
+    queueOrder: match.queueOrder ?? null,
+    status: match.status,
     team1: mapTeamDetails(match.team1, divisionId),
     team2: mapTeamDetails(match.team2, divisionId),
     score: normalizeScore(match.score),
@@ -285,10 +235,11 @@ async function getBracketSchedule({ slug, bracketId }) {
 
   const activeCourts = bracket.division.tournament.courts.filter((court) => court.active);
 
-  const matches = await prisma.match.findMany({
+  const relevantMatches = await prisma.match.findMany({
     where: {
       bracketId,
       winnerId: null,
+      status: { not: 'RETIRED' },
     },
     include: {
       team1: {
@@ -325,30 +276,17 @@ async function getBracketSchedule({ slug, bracketId }) {
     ],
   });
 
-  const relevantMatches = matches.filter((match) => getStatusValue(match) !== 'RETIRED');
-
   const activeMatches = relevantMatches.filter((match) => match.courtId != null);
   const conflictCache = new Map(
     relevantMatches.map((match) => [match.id, detectConflicts(match, activeMatches)]),
   );
 
   const queueMatches = relevantMatches.filter((match) => match.courtId == null);
-  queueMatches.sort((a, b) => {
-    const priorityDiff = getPriorityValue(b) - getPriorityValue(a);
-    if (priorityDiff !== 0) {
-      return priorityDiff;
-    }
+  queueMatches.sort(compareQueueOrder);
 
-    const startA = a.startTime ? new Date(a.startTime).getTime() : Number.POSITIVE_INFINITY;
-    const startB = b.startTime ? new Date(b.startTime).getTime() : Number.POSITIVE_INFINITY;
-    if (startA !== startB) {
-      return startA - startB;
-    }
-
-    return a.createdAt.getTime() - b.createdAt.getTime();
-  });
-
-  const queue = queueMatches.map((match) => mapMatchToSummary(match, bracket.divisionId, conflictCache.get(match.id) ?? []));
+  const queue = queueMatches.map((match, index) =>
+    mapMatchToSummary(match, bracket.divisionId, conflictCache.get(match.id) ?? [], queueMatches.length - index),
+  );
 
   const courtAssignments = relevantMatches.filter((match) => match.courtId != null);
 
@@ -367,7 +305,7 @@ async function getBracketSchedule({ slug, bracketId }) {
   return {
     bracketId: bracket.id,
     divisionId: bracket.divisionId,
-    queuePaused: getQueuePausedValue(bracket),
+    queuePaused: bracket.queuePaused,
     courts,
     queue,
   };
@@ -456,6 +394,18 @@ async function updateMatchAssignment({ slug, bracketId, matchId, courtId, startT
 
   const result = await prisma.$transaction(async (tx) => {
     let activeMatches = [];
+
+    // A paused bracket sends nothing new to court; moving or clearing a match already on court stays allowed.
+    if (nextCourtId && existingMatch.courtId == null) {
+      const { queuePaused } = await tx.bracket.findUnique({
+        where: { id: bracket.id },
+        select: { queuePaused: true },
+      });
+
+      if (queuePaused) {
+        throw Object.assign(new Error("This bracket's queue is paused"), { status: 409 });
+      }
+    }
 
     if (nextCourtId) {
       const conflictingMatch = await tx.match.findFirst({
@@ -556,6 +506,8 @@ async function updateMatchAssignment({ slug, bracketId, matchId, courtId, startT
       data: {
         courtId: nextCourtId,
         startTime: nextStartTime,
+        status: nextCourtId ? 'ACTIVE' : 'PENDING',
+        startedAt: nextCourtId ? existingMatch.startedAt ?? new Date() : null,
       },
       include: {
         bracket: {
@@ -604,13 +556,6 @@ async function updateMatchAssignment({ slug, bracketId, matchId, courtId, startT
     const conflictsAfterUpdate =
       updated.courtId != null ? detectConflicts(updated, activeMatches) : [];
 
-    if (updated.courtId != null) {
-      queuePriorityOverrides.delete(updated.id);
-      matchStatusOverrides.set(updated.id, 'ACTIVE');
-    } else {
-      matchStatusOverrides.set(updated.id, 'PENDING');
-    }
-
     return mapMatchToSummary(updated, bracket.divisionId, conflictsAfterUpdate);
   });
 
@@ -645,19 +590,9 @@ async function bulkRescheduleMatches({ slug, bracketId, updates, actor }) {
       throw new Error(`updates[${index}].courtId must be null or a string`);
     }
 
-    const hasPriority = Object.prototype.hasOwnProperty.call(update, 'priority');
-    let parsedPriority;
-    if (hasPriority) {
-      const priorityValue = update.priority;
-      if (priorityValue === null) {
-        parsedPriority = 0;
-      } else {
-        const numeric = Number(priorityValue);
-        if (!Number.isInteger(numeric)) {
-          throw new Error(`updates[${index}].priority must be an integer when provided`);
-        }
-        parsedPriority = numeric;
-      }
+    // Queue position is stored as Match.queueOrder and changed only through the queue reorder endpoint.
+    if (Object.prototype.hasOwnProperty.call(update, 'priority')) {
+      throw new Error(`updates[${index}].priority is no longer supported; reorder the queue instead`);
     }
 
     return {
@@ -665,8 +600,6 @@ async function bulkRescheduleMatches({ slug, bracketId, updates, actor }) {
       startTime: parsedStartTime,
       hasStartTime: startTime !== undefined,
       courtId: courtId ?? undefined,
-      hasPriority,
-      priority: hasPriority ? parsedPriority ?? 0 : undefined,
     };
   });
 
@@ -683,7 +616,7 @@ async function bulkRescheduleMatches({ slug, bracketId, updates, actor }) {
         actor,
       });
 
-      if (update.hasStartTime || update.hasPriority) {
+      if (update.hasStartTime) {
         const updated = await prisma.match.update({
           where: { id: summary.id },
           data: {
@@ -726,13 +659,8 @@ async function bulkRescheduleMatches({ slug, bracketId, updates, actor }) {
           resourceId: updated.id,
           metadata: {
             startTime: update.hasStartTime ? (update.startTime ? update.startTime.toISOString() : null) : undefined,
-            priority: update.hasPriority ? update.priority : undefined,
           },
         });
-
-        if (update.hasPriority) {
-          queuePriorityOverrides.set(updated.id, update.priority ?? 0);
-        }
 
         summary = mapMatchToSummary(updated, updated.bracket.divisionId);
       }
@@ -787,7 +715,7 @@ async function bulkRescheduleMatches({ slug, bracketId, updates, actor }) {
       throw Object.assign(new Error(`Match ${update.matchId} not found for bracket ${bracketId}`), { status: 404 });
     }
 
-    if (getStatusValue(match) === 'RETIRED') {
+    if (match.status === 'RETIRED') {
       throw Object.assign(new Error('Retired matches cannot be rescheduled'), { status: 409 });
     }
 
@@ -833,13 +761,8 @@ async function bulkRescheduleMatches({ slug, bracketId, updates, actor }) {
       resourceId: updated.id,
       metadata: {
         startTime: update.hasStartTime ? (update.startTime ? update.startTime.toISOString() : null) : undefined,
-        priority: update.hasPriority ? update.priority ?? 0 : undefined,
       },
     });
-
-    if (update.hasPriority) {
-      queuePriorityOverrides.set(updated.id, update.priority ?? 0);
-    }
 
     results.push(mapMatchToSummary(updated, updated.bracket.divisionId));
   }
@@ -904,7 +827,7 @@ async function retireMatches({ slug, bracketId, matchIds, actor }) {
         throw Object.assign(new Error(`Match ${matchId} not found for bracket ${bracketId}`), { status: 404 });
       }
 
-    if (getStatusValue(match) === 'COMPLETED') {
+    if (match.status === 'COMPLETED') {
       throw Object.assign(new Error('Completed matches cannot be retired'), { status: 409 });
     }
 
@@ -913,6 +836,7 @@ async function retireMatches({ slug, bracketId, matchIds, actor }) {
         data: {
           courtId: null,
           startTime: null,
+          status: 'RETIRED',
         },
         include: {
           bracket: {
@@ -957,8 +881,6 @@ async function retireMatches({ slug, bracketId, matchIds, actor }) {
         tx,
       );
 
-      queuePriorityOverrides.delete(updated.id);
-      matchStatusOverrides.set(updated.id, 'RETIRED');
       updates.push(mapMatchToSummary(updated, updated.bracket.divisionId));
     }
   });
@@ -1027,7 +949,7 @@ async function swapMatchCourts({ slug, bracketId, matchAId, matchBId, actor }) {
     throw Object.assign(new Error('Both matches must be assigned to a court to swap'), { status: 409 });
   }
 
-  if (getStatusValue(matchA) === 'RETIRED' || getStatusValue(matchB) === 'RETIRED') {
+  if (matchA.status === 'RETIRED' || matchB.status === 'RETIRED') {
     throw Object.assign(new Error('Cannot swap retired matches'), { status: 409 });
   }
 
@@ -1037,6 +959,7 @@ async function swapMatchCourts({ slug, bracketId, matchAId, matchBId, actor }) {
       data: {
         courtId: matchB.courtId,
         startTime: matchB.startTime,
+        status: 'ACTIVE',
       },
       include: {
         bracket: {
@@ -1073,6 +996,7 @@ async function swapMatchCourts({ slug, bracketId, matchAId, matchBId, actor }) {
       data: {
         courtId: matchA.courtId,
         startTime: matchA.startTime,
+        status: 'ACTIVE',
       },
       include: {
         bracket: {
@@ -1136,11 +1060,6 @@ async function swapMatchCourts({ slug, bracketId, matchAId, matchBId, actor }) {
     ];
   });
 
-  queuePriorityOverrides.delete(matchAId);
-  queuePriorityOverrides.delete(matchBId);
-  matchStatusOverrides.set(matchAId, 'ACTIVE');
-  matchStatusOverrides.set(matchBId, 'ACTIVE');
-
   return result;
 }
 
@@ -1160,16 +1079,24 @@ async function setQueuePaused({ slug, bracketId, paused, actor }) {
     throw Object.assign(new Error(`Bracket ${bracketId} not found for tournament "${slug}"`), { status: 404 });
   }
 
-  queuePauseOverrides.set(bracket.id, Boolean(paused));
+  await prisma.$transaction(async (tx) => {
+    await tx.bracket.update({
+      where: { id: bracket.id },
+      data: { queuePaused: Boolean(paused) },
+    });
 
-  await recordAuditLog({
-    actor,
-    action: paused ? 'BRACKET_QUEUE_PAUSE' : 'BRACKET_QUEUE_RESUME',
-    resourceType: 'Bracket',
-    resourceId: bracket.id,
-    metadata: {
-      queuePaused: Boolean(paused),
-    },
+    await recordAuditLog(
+      {
+        actor,
+        action: paused ? 'BRACKET_QUEUE_PAUSE' : 'BRACKET_QUEUE_RESUME',
+        resourceType: 'Bracket',
+        resourceId: bracket.id,
+        metadata: {
+          queuePaused: Boolean(paused),
+        },
+      },
+      tx,
+    );
   });
 
   return {
@@ -1236,28 +1163,44 @@ async function reorderQueue({ slug, bracketId, order, actor }) {
 
   const matchMap = new Map(matches.map((match) => [match.id, match]));
 
+  for (const matchId of uniqueOrder) {
+    const match = matchMap.get(matchId);
+
+    if (!match) {
+      throw Object.assign(new Error(`Match ${matchId} not found for bracket ${bracketId}`), { status: 404 });
+    }
+
+    if (match.status === 'RETIRED') {
+      throw Object.assign(new Error('Retired matches cannot be prioritized'), { status: 409 });
+    }
+
+    if (match.courtId) {
+      throw Object.assign(new Error('Only queued matches can be reprioritized'), { status: 409 });
+    }
+  }
+
   const updates = await prisma.$transaction(async (tx) => {
-    const priorityBase = uniqueOrder.length;
+    // The listed matches go first, in the given order; the rest of the queue keeps its order behind them.
+    // P1-3 replaces this full renumbering with midpoint moves.
+    const otherQueued = await tx.match.findMany({
+      where: {
+        bracketId,
+        winnerId: null,
+        courtId: null,
+        status: { not: 'RETIRED' },
+        id: { notIn: uniqueOrder },
+      },
+      select: { id: true, queueOrder: true, createdAt: true },
+    });
+    otherQueued.sort(compareQueueOrder);
+
+    const fullOrder = [...uniqueOrder, ...otherQueued.map((match) => match.id)];
     const updatedMatches = [];
 
-    for (let index = 0; index < uniqueOrder.length; index += 1) {
-      const matchId = uniqueOrder[index];
-      const match = matchMap.get(matchId);
-
-      if (!match) {
-        throw Object.assign(new Error(`Match ${matchId} not found for bracket ${bracketId}`), { status: 404 });
-      }
-
-      if (getStatusValue(match) === 'RETIRED') {
-        throw Object.assign(new Error('Retired matches cannot be prioritized'), { status: 409 });
-      }
-
-      if (match.courtId) {
-        throw Object.assign(new Error('Only queued matches can be reprioritized'), { status: 409 });
-      }
-
-      const updated = await tx.match.findUnique({
-        where: { id: match.id },
+    for (let index = 0; index < fullOrder.length; index += 1) {
+      const updated = await tx.match.update({
+        where: { id: fullOrder[index] },
+        data: { queueOrder: (index + 1) * 1000 },
         include: {
           bracket: {
             select: {
@@ -1288,9 +1231,9 @@ async function reorderQueue({ slug, bracketId, order, actor }) {
         },
       });
 
-      queuePriorityOverrides.set(match.id, priorityBase - index);
-
-      updatedMatches.push(updated);
+      if (index < uniqueOrder.length) {
+        updatedMatches.push(updated);
+      }
     }
 
     await recordAuditLog(
@@ -1306,10 +1249,12 @@ async function reorderQueue({ slug, bracketId, order, actor }) {
       tx,
     );
 
-    return updatedMatches;
+    return { updatedMatches, queueLength: fullOrder.length };
   });
 
-  return updates.map((match) => mapMatchToSummary(match, match.bracket.divisionId));
+  return updates.updatedMatches.map((match, index) =>
+    mapMatchToSummary(match, match.bracket.divisionId, [], updates.queueLength - index),
+  );
 }
 
 async function getTournamentQueue({ slug }) {
@@ -1377,18 +1322,8 @@ async function getTournamentQueue({ slug }) {
         queuePosition: position,
       })),
     )
+    // queueOrder is numbered per bracket, so brackets stay in creation order, each in its own queue order.
     .sort((a, b) => {
-      const priorityDiff = (b.priority ?? 0) - (a.priority ?? 0);
-      if (priorityDiff !== 0) {
-        return priorityDiff;
-      }
-
-      const startA = a.startTime ? new Date(a.startTime).getTime() : Number.POSITIVE_INFINITY;
-      const startB = b.startTime ? new Date(b.startTime).getTime() : Number.POSITIVE_INFINITY;
-      if (startA !== startB) {
-        return startA - startB;
-      }
-
       if (a.bracketOrder !== b.bracketOrder) {
         return a.bracketOrder - b.bracketOrder;
       }
@@ -1416,7 +1351,4 @@ module.exports = {
   setQueuePaused,
   reorderQueue,
   getTournamentQueue,
-  setMatchStatusOverride,
-  clearMatchStatusOverride,
-  clearQueuePriorityOverride,
 };
